@@ -87,6 +87,13 @@ body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .chip{font-size:10px;padding:2px 8px;border-radius:20px;background:#161616;border:1px solid #222;color:var(--text-dim)}
 .chip.in{background:#0a1a0d;border-color:#1a4020;color:var(--green)}
+.chip.bbu-chip{background:#1a1a0a;border-color:#3a2e10;color:#c98a30}
+.chip.b70-chip{background:#0a0d1a;border-color:#10203a;color:var(--blue)}
+.chip.bfl-chip{background:#1a0a0a;border-color:#3a1010;color:#c94040}
+.chip.b10-chip{background:#0a1a10;border-color:#103a18;color:var(--green)}
+.chip.bsp-chip{background:#1a0d1a;border-color:#2e1a3a;color:#b06fd4}
+.chip.boly-chip{background:#0a0d1a;border-color:#10203a;color:var(--blue)}
+.chip.bother-chip{background:#1a1a1a;border-color:#333;color:var(--text-muted)}
 
 /* CHALLENGES */
 .crow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-subtle)}
@@ -290,9 +297,11 @@ async function render() {
   // Build roster for all races stacked
   var rosterHtml = '';
   upcomingRaces.slice(0,4).forEach(function(race) {
+    var badge = distBadge(race.Distance);
+    var chipClass = 'chip ' + badge[0] + '-chip';
     var signedUp = (race.Signups||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
     var chips = signedUp.map(function(n){
-      return '<div class="chip in">'+n+'</div>';
+      return '<div class="'+chipClass+'">'+n+'</div>';
     }).join('');
     rosterHtml += '<div class="roster">'
       + '<div class="sec" style="margin:0 0 6px">Signed up — '+race.Name+'</div>'
