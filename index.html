@@ -131,6 +131,13 @@ body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;
 .ms-podium{background:#1a0a1a;border:1px solid #3a103a;color:#b06fd4}
 .no-results{padding:24px;text-align:center;color:var(--text-dim);font-size:12px}
 
+/* PAGINATION */
+.results-pagination{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 4px}
+.pg-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.pg-btn:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
+.pg-btn:disabled{opacity:0.3;cursor:default}
+.pg-label{font-size:11px;color:var(--text-dim);letter-spacing:1px}
+
 /* FOOTER */
 .footer{text-align:center;padding:24px 0 8px;font-size:11px;color:var(--text-dimmer);letter-spacing:1px;text-transform:uppercase}
 
@@ -353,23 +360,39 @@ async function render() {
       + '</div>';
   }).join('');
 
-  // Build results table
+  // Build results table — reversed, paginated 20 per page
   var resultsHtml = '';
   if (results.length === 0) {
     resultsHtml = '<div class="no-results">No race results yet — add them to the RaceResults tab in Google Sheets</div>';
   } else {
-    var resultRows = results.map(function(r) {
-      return '<tr>'
-        + '<td class="result-athlete">' + (r.Athlete||'') + '</td>'
-        + '<td>' + (r.Race||'') + '</td>'
-        + '<td class="result-time">' + (r.Time||'—') + '</td>'
-        + '<td>' + milestoneBadge(r.Milestone) + '</td>'
-        + '</tr>';
-    }).join('');
-    resultsHtml = '<div class="results-wrap"><table class="results-table">'
-      + '<thead><tr><th>Athlete</th><th>Race</th><th>Time</th><th>Milestone</th></tr></thead>'
-      + '<tbody>' + resultRows + '</tbody>'
-      + '</table></div>';
+    var reversed = results.slice().reverse();
+    var pageSize = 20;
+    var totalPages = Math.ceil(reversed.length / pageSize);
+    var pages = [];
+    for (var p = 0; p < totalPages; p++) {
+      var pageRows = reversed.slice(p * pageSize, (p + 1) * pageSize).map(function(r) {
+        return '<tr>'
+          + '<td class="result-athlete">' + (r.Athlete||'') + '</td>'
+          + '<td>' + (r.Race||'') + '</td>'
+          + '<td class="result-time">' + (r.Time||'—') + '</td>'
+          + '<td>' + milestoneBadge(r.Milestone) + '</td>'
+          + '</tr>';
+      }).join('');
+      pages.push('<div class="results-page" id="rpage-'+p+'" style="display:'+(p===0?'block':'none')+'">'
+        + '<div class="results-wrap"><table class="results-table">'
+        + '<thead><tr><th>Athlete</th><th>Race</th><th>Time</th><th>Milestone</th></tr></thead>'
+        + '<tbody>' + pageRows + '</tbody>'
+        + '</table></div>'
+        + '</div>');
+    }
+    var pagination = totalPages > 1
+      ? '<div class="results-pagination" id="results-pagination">'
+        + (totalPages > 1 ? '<button class="pg-btn" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>' : '')
+        + '<span class="pg-label" id="pg-label">1 / ' + totalPages + '</span>'
+        + (totalPages > 1 ? '<button class="pg-btn" id="pg-next" onclick="changePage(1)">Next →</button>' : '')
+        + '</div>'
+      : '';
+    resultsHtml = pages.join('') + pagination;
   }
 
   var html = ''
@@ -398,6 +421,21 @@ async function render() {
     + '</div>';
 
   document.getElementById('main-content').innerHTML = html;
+}
+
+var currentPage = 0;
+var totalResultPages = 0;
+
+function changePage(dir) {
+  var pages = document.querySelectorAll('.results-page');
+  if (pages.length === 0) return;
+  totalResultPages = pages.length;
+  pages[currentPage].style.display = 'none';
+  currentPage = Math.max(0, Math.min(currentPage + dir, totalResultPages - 1));
+  pages[currentPage].style.display = 'block';
+  document.getElementById('pg-label').textContent = (currentPage + 1) + ' / ' + totalResultPages;
+  document.getElementById('pg-prev').disabled = currentPage === 0;
+  document.getElementById('pg-next').disabled = currentPage === totalResultPages - 1;
 }
 
 function showUpcoming() {
