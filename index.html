@@ -45,24 +45,30 @@ body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;
 .sl{font-size:11px;color:var(--text-dim);margin-top:3px}
 
 /* LEADERBOARD */
-.lb{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
-.lbh{display:grid;grid-template-columns:26px minmax(0,1fr) 70px 70px 70px 58px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.lb{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.lbh{display:grid;grid-template-columns:28px 220px 1fr 72px 72px 72px 64px;padding:8px 14px;border-bottom:1px solid var(--border);align-items:center}
 .lbh div{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer)}
-.lbr{display:grid;grid-template-columns:26px minmax(0,1fr) 70px 70px 70px 58px;padding:10px 14px;border-bottom:1px solid var(--border-subtle);align-items:center;transition:background 0.15s}
+.lbh .col-name{text-align:left}
+.lbh .col-num{text-align:center}
+.lbr{display:grid;grid-template-columns:28px 220px 1fr 72px 72px 72px 64px;padding:10px 14px;border-bottom:1px solid var(--border-subtle);align-items:center;transition:background 0.15s}
 .lbr:last-child{border-bottom:none}
 .lbr:hover{background:#111}
 .rk{font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--text-dimmer)}
 .rk.t{color:var(--orange)}
-.nm{font-size:13px;font-weight:500;color:var(--text)}
-.sp{font-size:10px;color:var(--text-dim);margin-top:1px}
+.nm{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-wrap{height:2px;background:#1a1a1a;border-radius:1px;margin-top:4px}
 .bar-fill{height:2px;background:var(--orange);border-radius:1px;transition:width 1s ease}
-.lv{font-size:12px;color:var(--text-muted)}
-.dots{display:flex;gap:3px}
+.lv{font-size:12px;color:var(--text-muted);text-align:center}
+.dots{display:flex;gap:3px;justify-content:center}
 .d{width:7px;height:7px;border-radius:50%;background:#1c1c1c}
 .d.on{background:var(--orange)}
 .d.half{background:var(--orange-dim)}
 .empty-lb{padding:32px;text-align:center;color:var(--text-dim);font-size:13px}
+.lb-pagination{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 4px;margin-bottom:8px}
+.lb-pg-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.lb-pg-btn:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
+.lb-pg-btn:disabled{opacity:0.3;cursor:default}
+.lb-pg-label{font-size:11px;color:var(--text-dim);letter-spacing:1px}
 
 /* BOTTOM GRID */
 .btm{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -160,7 +166,10 @@ body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;
         <div class="tag">Team Training Dashboard</div>
       </div>
     </div>
-    <div class="wpill" id="week-label">Loading...</div>
+    <div class="toggle-wrap" id="lb-toggle" style="margin:0;width:auto;min-width:200px">
+      <button class="toggle-btn active" id="btn-week" onclick="setLbMode('week')">This Week</button>
+      <button class="toggle-btn" id="btn-month" onclick="setLbMode('month')">This Month</button>
+    </div>
   </div>
 
   <div id="main-content">
@@ -248,8 +257,8 @@ function distBadge(dist) {
 function streakDots(n) {
   n = parseInt(n) || 0;
   var html = '<div class="dots">';
-  for (var i=0;i<5;i++) {
-    if (i < Math.min(n,5)) html += '<div class="d on"></div>';
+  for (var i=0;i<7;i++) {
+    if (i < Math.min(n,7)) html += '<div class="d on"></div>';
     else html += '<div class="d"></div>';
   }
   return html + '</div>';
@@ -278,11 +287,63 @@ async function render() {
     URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results) : Promise.resolve([]),
   ]);
 
+  // Store all weekly data globally for toggle
+  window._allWeekly = weekly;
+  window._allRaces = upcomingRaces;
+
   // Get current week label from sheet or use most recent
   var weeks = [...new Set(weekly.map(function(r){return r.Week;}))].sort().reverse();
   var currentWeek = weeks[0] || '';
-  var weekRows = weekly.filter(function(r){ return r.Week === currentWeek; });
-  weekRows.sort(function(a,b){ return parseFloat(b.Miles||0) - parseFloat(a.Miles||0); });
+
+  // Helper: get Monday of week containing a date
+  function getMondayOf(d) {
+    var day = d.getDay();
+    var diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    var m = new Date(d);
+    m.setDate(diff);
+    m.setHours(0,0,0,0);
+    return m;
+  }
+
+  function getLeaderboardRows(mode) {
+    if (mode === 'month') {
+      // Aggregate all weeks whose Monday falls in the current calendar month
+      var now = new Date();
+      var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      var monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      var monthWeeks = weeks.filter(function(w) {
+        var d = new Date(w + 'T00:00:00');
+        return d >= monthStart && d <= monthEnd;
+      });
+      var byAthlete = {};
+      weekly.filter(function(r){ return monthWeeks.includes(r.Week); }).forEach(function(r){
+        var n = r.Athlete;
+        if (!byAthlete[n]) byAthlete[n] = {Athlete:n, Miles:0, Hours:0, Sessions:0, ActiveDays:0, _weeks:0};
+        byAthlete[n].Miles    += parseFloat(r.Miles||0);
+        byAthlete[n].Hours    += parseFloat(r.Hours||0);
+        byAthlete[n].Sessions += parseInt(r.Sessions||0);
+        byAthlete[n].ActiveDays += parseInt(r.ActiveDays||0);
+        byAthlete[n]._weeks   += 1;
+      });
+      return Object.values(byAthlete).map(function(r){
+        r.Miles = parseFloat(r.Miles.toFixed(1));
+        r.Hours = parseFloat(r.Hours.toFixed(1));
+        return r;
+      }).sort(function(a,b){ return b.Miles - a.Miles; });
+    } else {
+      // Current Mon-Sun week
+      var monday = getMondayOf(new Date());
+      var mondayStr = monday.toISOString().slice(0,10);
+      // Find the week label in our data that matches this Monday
+      var matchWeek = weeks.find(function(w){ return w === mondayStr; }) || weeks[0] || '';
+      var rows = weekly.filter(function(r){ return r.Week === matchWeek; });
+      rows.sort(function(a,b){ return parseFloat(b.Miles||0) - parseFloat(a.Miles||0); });
+      return rows;
+    }
+  }
+
+  var weekRows = getLeaderboardRows('week');
+  window._getLeaderboardRows = getLeaderboardRows;
 
   // Team stats
   var totalMiles = weekRows.reduce(function(s,r){ return s+parseFloat(r.Miles||0); },0);
@@ -303,11 +364,17 @@ async function render() {
 
   var nextRace = upcomingRaces[0];
 
-  // Build leaderboard rows
-  var lbRows = weekRows.length === 0
-    ? '<div class="empty-lb">No training data yet — athletes connecting soon</div>'
-    : weekRows.map(function(r, i) {
-        var pct = Math.round((parseFloat(r.Miles||0)/maxMiles)*100);
+  // Build leaderboard rows with pagination (15 per page)
+  function buildLbHtml(rows, maxMi) {
+    if (rows.length === 0) return '<div class="empty-lb">No training data yet — athletes connecting soon</div>';
+    var pageSize = 15;
+    var totalPg = Math.ceil(rows.length / pageSize);
+    var pages = [];
+    for (var p = 0; p < totalPg; p++) {
+      var slice = rows.slice(p * pageSize, (p+1) * pageSize);
+      var rowsHtml = slice.map(function(r, idx) {
+        var i = p * pageSize + idx;
+        var pct = Math.round((parseFloat(r.Miles||0)/maxMi)*100);
         var topClass = i < 3 ? ' t' : '';
         var miles = parseFloat(r.Miles||0).toFixed(1);
         var hours = parseFloat(r.Hours||0).toFixed(1);
@@ -316,12 +383,29 @@ async function render() {
           + '<div class="rk'+topClass+'">'+(i+1)+'</div>'
           + '<div><div class="nm">'+r.Athlete+'</div>'
           + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
+          + '<div></div>'
           + '<div class="lv">'+miles+'</div>'
           + '<div class="lv">'+hours+'</div>'
           + '<div class="lv">'+sessions+'</div>'
           + streakDots(r.ActiveDays)
           + '</div>';
       }).join('');
+      pages.push('<div class="lb-page" id="lbpage-'+p+'" style="display:'+(p===0?'block':'none')+'">'+rowsHtml+'</div>');
+    }
+    var pagination = totalPg > 1
+      ? '<div class="lb-pagination">'
+        + '<button class="lb-pg-btn" id="lb-prev" onclick="changeLbPage(-1)" disabled>← Prev</button>'
+        + '<span class="lb-pg-label" id="lb-pg-label">1 / '+totalPg+'</span>'
+        + '<button class="lb-pg-btn" id="lb-next" onclick="changeLbPage(1)">Next →</button>'
+        + '</div>'
+      : '';
+    return pages.join('') + pagination;
+  }
+
+  var lbRows = buildLbHtml(weekRows, maxMiles);
+  window._buildLbHtml = buildLbHtml;
+  window._weekRows = weekRows;
+  window._maxMiles = maxMiles;
 
   // Build race rows
   var raceRows = upcomingRaces.slice(0,4).map(function(r) {
@@ -404,8 +488,8 @@ async function render() {
     + '<div class="sc"><div class="sv hot">'+avgConsistency+'%</div><div class="sl">Consistency rate</div></div>'
     + '</div>'
     + '<div class="sec">Weekly leaderboard</div>'
-    + '<div class="lb">'
-    + '<div class="lbh"><div></div><div>athlete</div><div>miles</div><div>hours</div><div>sessions</div><div>streak</div></div>'
+    + '<div class="lb" id="leaderboard">'
+    + '<div class="lbh"><div></div><div class="col-name">athlete</div><div></div><div class="col-num">miles</div><div class="col-num">hours</div><div class="col-num">sessions</div><div class="col-num">streak</div></div>'
     + lbRows
     + '</div>'
     + '<div class="btm">'
@@ -436,6 +520,37 @@ function changePage(dir) {
   document.getElementById('pg-label').textContent = (currentPage + 1) + ' / ' + totalResultPages;
   document.getElementById('pg-prev').disabled = currentPage === 0;
   document.getElementById('pg-next').disabled = currentPage === totalResultPages - 1;
+}
+
+// Leaderboard mode toggle
+var lbCurrentPage = 0;
+var lbMode = 'week';
+
+function setLbMode(mode) {
+  lbMode = mode;
+  lbCurrentPage = 0;
+  document.getElementById('btn-week').classList.toggle('active', mode === 'week');
+  document.getElementById('btn-month').classList.toggle('active', mode === 'month');
+  document.getElementById('stat-label').textContent = mode === 'month' ? 'Team this month (last 4 weeks)' : 'Team this week';
+  var rows = window._getLeaderboardRows(mode);
+  var maxMi = rows.length ? parseFloat(rows[0].Miles||1) : 1;
+  var lb = document.getElementById('leaderboard');
+  var header = lb.querySelector('.lbh').outerHTML;
+  lb.innerHTML = header + window._buildLbHtml(rows, maxMi);
+}
+
+function changeLbPage(dir) {
+  var pages = document.querySelectorAll('#leaderboard .lb-page');
+  if (!pages.length) return;
+  pages[lbCurrentPage].style.display = 'none';
+  lbCurrentPage = Math.max(0, Math.min(lbCurrentPage + dir, pages.length - 1));
+  pages[lbCurrentPage].style.display = 'block';
+  var lbl = document.getElementById('lb-pg-label');
+  if (lbl) lbl.textContent = (lbCurrentPage+1) + ' / ' + pages.length;
+  var prev = document.getElementById('lb-prev');
+  var next = document.getElementById('lb-next');
+  if (prev) prev.disabled = lbCurrentPage === 0;
+  if (next) next.disabled = lbCurrentPage === pages.length - 1;
 }
 
 function showUpcoming() {
