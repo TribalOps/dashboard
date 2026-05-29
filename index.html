@@ -496,6 +496,22 @@ function setLbMode(mode) {
   if (lbLabel) lbLabel.textContent = mode === 'month' ? 'Monthly leaderboard' : 'Weekly leaderboard';
   var rows = window._getLeaderboardRows(mode);
   var maxMi = rows.length ? parseFloat(rows[0].Miles||1) : 1;
+
+  // Update stat cards
+  var totalMiles    = rows.reduce(function(s,r){ return s+parseFloat(r.Miles||0); }, 0);
+  var totalSessions = rows.reduce(function(s,r){ return s+parseInt(r.Sessions||0); }, 0);
+  var avgConsistency = rows.length
+    ? Math.round(rows.reduce(function(s,r){ return s+parseFloat(r.ConsistencyPct||0); }, 0) / rows.length)
+    : 0;
+  var activeAthletes = rows.length;
+
+  var cards = document.querySelectorAll('.sc .sv');
+  if (cards[0]) cards[0].textContent = Math.round(totalMiles).toLocaleString();
+  if (cards[1]) cards[1].textContent = activeAthletes;
+  if (cards[2]) cards[2].textContent = totalSessions;
+  if (cards[3]) cards[3].textContent = avgConsistency + '%';
+
+  // Update leaderboard
   var lb = document.getElementById('leaderboard');
   if (!lb) return;
   var header = lb.querySelector('.lbh').outerHTML;
