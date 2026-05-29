@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,24 +45,30 @@ body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;
 .sl{font-size:11px;color:var(--text-dim);margin-top:3px}
 
 /* LEADERBOARD */
-.lb{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
-.lbh{display:grid;grid-template-columns:26px minmax(0,1fr) 70px 70px 70px 58px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.lb{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.lbh{display:grid;grid-template-columns:28px 220px 1fr 72px 72px 72px 64px;padding:8px 14px;border-bottom:1px solid var(--border);align-items:center}
 .lbh div{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dimmer)}
-.lbr{display:grid;grid-template-columns:26px minmax(0,1fr) 70px 70px 70px 58px;padding:10px 14px;border-bottom:1px solid var(--border-subtle);align-items:center;transition:background 0.15s}
+.lbh .col-name{text-align:left}
+.lbh .col-num{text-align:center}
+.lbr{display:grid;grid-template-columns:28px 220px 1fr 72px 72px 72px 64px;padding:10px 14px;border-bottom:1px solid var(--border-subtle);align-items:center;transition:background 0.15s}
 .lbr:last-child{border-bottom:none}
 .lbr:hover{background:#111}
 .rk{font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--text-dimmer)}
 .rk.t{color:var(--orange)}
-.nm{font-size:13px;font-weight:500;color:var(--text)}
-.sp{font-size:10px;color:var(--text-dim);margin-top:1px}
+.nm{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-wrap{height:2px;background:#1a1a1a;border-radius:1px;margin-top:4px}
 .bar-fill{height:2px;background:var(--orange);border-radius:1px;transition:width 1s ease}
-.lv{font-size:12px;color:var(--text-muted)}
-.dots{display:flex;gap:3px}
+.lv{font-size:12px;color:var(--text-muted);text-align:center}
+.dots{display:flex;gap:3px;justify-content:center}
 .d{width:7px;height:7px;border-radius:50%;background:#1c1c1c}
 .d.on{background:var(--orange)}
 .d.half{background:var(--orange-dim)}
 .empty-lb{padding:32px;text-align:center;color:var(--text-dim);font-size:13px}
+.lb-pagination{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 4px;margin-bottom:8px}
+.lb-pg-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.lb-pg-btn:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
+.lb-pg-btn:disabled{opacity:0.3;cursor:default}
+.lb-pg-label{font-size:11px;color:var(--text-dim);letter-spacing:1px}
 
 /* BOTTOM GRID */
 .btm{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -159,7 +166,10 @@ body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;
         <div class="tag">Team Training Dashboard</div>
       </div>
     </div>
-    <div class="wpill" id="week-label">Loading...</div>
+    <div class="toggle-wrap" id="lb-toggle" style="margin:0;width:auto;min-width:200px">
+      <button class="toggle-btn active" id="btn-week" onclick="setLbMode('week')">This Week</button>
+      <button class="toggle-btn" id="btn-month" onclick="setLbMode('month')">This Month</button>
+    </div>
   </div>
 
   <div id="main-content">
@@ -194,7 +204,8 @@ function parseCSV(text) {
 }
 
 async function fetchCSV(url) {
-  var res = await fetch(url);
+  var res = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+  if (!res.ok) throw new Error('Failed to fetch: ' + url);
   return parseCSV(await res.text());
 }
 
@@ -247,8 +258,8 @@ function distBadge(dist) {
 function streakDots(n) {
   n = parseInt(n) || 0;
   var html = '<div class="dots">';
-  for (var i=0;i<5;i++) {
-    if (i < Math.min(n,5)) html += '<div class="d on"></div>';
+  for (var i=0;i<7;i++) {
+    if (i < Math.min(n,7)) html += '<div class="d on"></div>';
     else html += '<div class="d"></div>';
   }
   return html + '</div>';
@@ -266,33 +277,111 @@ function chalIcon(icon, status) {
 // ── RENDER ───────────────────────────────────────────────────
 async function render() {
   var weekStart = getMonday(new Date());
-  var weekLabel = 'Week of ' + fmtWeek(weekStart);
-  document.getElementById('week-label').textContent = weekLabel;
+  document.getElementById('lb-toggle') && (document.getElementById('lb-toggle').style.visibility = 'visible');
 
   var [weekly, races, challenges, athletes, results] = await Promise.all([
-    fetchCSV(URLS.weekly),
-    fetchCSV(URLS.races),
-    fetchCSV(URLS.challenges),
-    fetchCSV(URLS.athletes),
-    URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results) : Promise.resolve([]),
+    fetchCSV(URLS.weekly).catch(function(){ return []; }),
+    fetchCSV(URLS.races).catch(function(){ return []; }),
+    fetchCSV(URLS.challenges).catch(function(){ return []; }),
+    fetchCSV(URLS.athletes).catch(function(){ return []; }),
+    URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results).catch(function(){ return []; }) : Promise.resolve([]),
   ]);
 
-  // Get current week label from sheet or use most recent
-  var weeks = [...new Set(weekly.map(function(r){return r.Week;}))].sort().reverse();
-  var currentWeek = weeks[0] || '';
-  var weekRows = weekly.filter(function(r){ return r.Week === currentWeek; });
-  weekRows.sort(function(a,b){ return parseFloat(b.Miles||0) - parseFloat(a.Miles||0); });
+  // Store globally for toggle
+  window._allWeekly = weekly;
+
+  // All weeks available, sorted newest first
+  var weeks = [...new Set(weekly.map(function(r){ return r.Week; }))].sort().reverse();
+
+  // Helper: get Monday of a given date
+  function getMondayOf(d) {
+    var day = d.getDay();
+    var diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    var m = new Date(d); m.setDate(diff); m.setHours(0,0,0,0);
+    return m;
+  }
+
+  // Get leaderboard rows for week or month mode
+  function getLeaderboardRows(mode) {
+    if (mode === 'month') {
+      var now = new Date();
+      var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      var monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      var monthWeeks = weeks.filter(function(w) {
+        var d = new Date(w + 'T00:00:00');
+        return d >= monthStart && d <= monthEnd;
+      });
+      var byAthlete = {};
+      weekly.filter(function(r){ return monthWeeks.includes(r.Week); }).forEach(function(r){
+        var n = r.Athlete;
+        if (!byAthlete[n]) byAthlete[n] = {Athlete:n, Miles:0, Hours:0, Sessions:0, ActiveDays:0};
+        byAthlete[n].Miles    += parseFloat(r.Miles||0);
+        byAthlete[n].Hours    += parseFloat(r.Hours||0);
+        byAthlete[n].Sessions += parseInt(r.Sessions||0);
+        byAthlete[n].ActiveDays += parseInt(r.ActiveDays||0);
+      });
+      return Object.values(byAthlete).map(function(r){
+        r.Miles = parseFloat(r.Miles.toFixed(1));
+        r.Hours = parseFloat(r.Hours.toFixed(1));
+        return r;
+      }).sort(function(a,b){ return b.Miles - a.Miles; });
+    } else {
+      var mondayStr = getMondayOf(new Date()).toISOString().slice(0,10);
+      var matchWeek = weeks.find(function(w){ return w === mondayStr; }) || weeks[0] || '';
+      var rows = weekly.filter(function(r){ return r.Week === matchWeek; });
+      return rows.sort(function(a,b){ return parseFloat(b.Miles||0) - parseFloat(a.Miles||0); });
+    }
+  }
+
+  window._getLeaderboardRows = getLeaderboardRows;
+
+  // Build leaderboard HTML with 15-per-page pagination
+  function buildLbHtml(rows, maxMi) {
+    if (rows.length === 0) return '<div class="empty-lb">No training data yet — athletes connecting soon</div>';
+    var pageSize = 15;
+    var totalPg = Math.ceil(rows.length / pageSize);
+    var pages = [];
+    for (var p = 0; p < totalPg; p++) {
+      var slice = rows.slice(p * pageSize, (p+1) * pageSize);
+      var rowsHtml = slice.map(function(r, idx) {
+        var i = p * pageSize + idx;
+        var pct = Math.round((parseFloat(r.Miles||0) / maxMi) * 100);
+        var topClass = i < 3 ? ' t' : '';
+        return '<div class="lbr">'
+          + '<div class="rk'+topClass+'">'+(i+1)+'</div>'
+          + '<div><div class="nm">'+r.Athlete+'</div>'
+          + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
+          + '<div></div>'
+          + '<div class="lv">'+parseFloat(r.Miles||0).toFixed(1)+'</div>'
+          + '<div class="lv">'+parseFloat(r.Hours||0).toFixed(1)+'</div>'
+          + '<div class="lv">'+( r.Sessions||0)+'</div>'
+          + streakDots(r.ActiveDays)
+          + '</div>';
+      }).join('');
+      pages.push('<div class="lb-page" id="lbpage-'+p+'" style="display:'+(p===0?'block':'none')+'">'+rowsHtml+'</div>');
+    }
+    var pagination = totalPg > 1
+      ? '<div class="lb-pagination">'
+        + '<button class="lb-pg-btn" id="lb-prev" onclick="changeLbPage(-1)" disabled>← Prev</button>'
+        + '<span class="lb-pg-label" id="lb-pg-label">1 / '+totalPg+'</span>'
+        + '<button class="lb-pg-btn" id="lb-next" onclick="changeLbPage(1)">Next →</button>'
+        + '</div>'
+      : '';
+    return pages.join('') + pagination;
+  }
+  window._buildLbHtml = buildLbHtml;
+
+  // Week leaderboard data
+  var weekRows = getLeaderboardRows('week');
+  var maxMiles = weekRows.length ? parseFloat(weekRows[0].Miles||1) : 1;
 
   // Team stats
-  var totalMiles = weekRows.reduce(function(s,r){ return s+parseFloat(r.Miles||0); },0);
-  var totalSessions = weekRows.reduce(function(s,r){ return s+parseInt(r.Sessions||0); },0);
+  var totalMiles     = weekRows.reduce(function(s,r){ return s+parseFloat(r.Miles||0); }, 0);
+  var totalSessions  = weekRows.reduce(function(s,r){ return s+parseInt(r.Sessions||0); }, 0);
   var avgConsistency = weekRows.length
-    ? Math.round(weekRows.reduce(function(s,r){ return s+parseFloat(r.ConsistencyPct||0); },0)/weekRows.length)
+    ? Math.round(weekRows.reduce(function(s,r){ return s+parseFloat(r.ConsistencyPct||0); }, 0) / weekRows.length)
     : 0;
   var activeAthletes = weekRows.length;
-
-  // Max miles for bar scaling
-  var maxMiles = weekRows.length ? parseFloat(weekRows[0].Miles||1) : 1;
 
   // Upcoming races
   var today = new Date(); today.setHours(0,0,0,0);
@@ -300,29 +389,7 @@ async function render() {
     return r.Date && new Date(r.Date+'T00:00:00') >= today;
   }).sort(function(a,b){ return new Date(a.Date) - new Date(b.Date); });
 
-  var nextRace = upcomingRaces[0];
-
-  // Build leaderboard rows
-  var lbRows = weekRows.length === 0
-    ? '<div class="empty-lb">No training data yet — athletes connecting soon</div>'
-    : weekRows.map(function(r, i) {
-        var pct = Math.round((parseFloat(r.Miles||0)/maxMiles)*100);
-        var topClass = i < 3 ? ' t' : '';
-        var miles = parseFloat(r.Miles||0).toFixed(1);
-        var hours = parseFloat(r.Hours||0).toFixed(1);
-        var sessions = r.Sessions || '0';
-        return '<div class="lbr">'
-          + '<div class="rk'+topClass+'">'+(i+1)+'</div>'
-          + '<div><div class="nm">'+r.Athlete+'</div>'
-          + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
-          + '<div class="lv">'+miles+'</div>'
-          + '<div class="lv">'+hours+'</div>'
-          + '<div class="lv">'+sessions+'</div>'
-          + streakDots(r.ActiveDays)
-          + '</div>';
-      }).join('');
-
-  // Build race rows
+  // Race rows
   var raceRows = upcomingRaces.slice(0,4).map(function(r) {
     var badge = distBadge(r.Distance);
     return '<div class="rrow">'
@@ -334,32 +401,20 @@ async function render() {
       + '</div>';
   }).join('');
 
-  // Build roster for all races stacked
+  // Roster stacked per race
   var rosterHtml = '';
   upcomingRaces.slice(0,4).forEach(function(race) {
     var badge = distBadge(race.Distance);
     var chipClass = 'chip ' + badge[0] + '-chip';
-    var signedUp = (race.Signups||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-    var chips = signedUp.map(function(n){
-      return '<div class="'+chipClass+'">'+n+'</div>';
-    }).join('');
+    var signedUp = (race.Signups||'').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var chips = signedUp.map(function(n){ return '<div class="'+chipClass+'">'+n+'</div>'; }).join('');
     rosterHtml += '<div class="roster">'
       + '<div class="sec" style="margin:0 0 6px">Signed up — '+race.Name+'</div>'
       + '<div class="chips">'+(chips||'<span style="font-size:11px;color:var(--text-dim)">No signups yet</span>')+'</div>'
       + '</div>';
   });
 
-  // Build challenge rows
-  var chalRows = challenges.map(function(c) {
-    var isActive = (c.Status||'').toLowerCase() === 'active';
-    return '<div class="crow">'
-      + '<div class="cico">'+chalIcon(c.Icon, c.Status)+'</div>'
-      + '<div><div class="cn">'+c.Name+'</div><div class="cs">'+c.Description+'</div></div>'
-      + '<div class="cstat '+(isActive?'ca':'cd')+'">'+(isActive?'Active':'Done ✓')+'</div>'
-      + '</div>';
-  }).join('');
-
-  // Build results table — reversed, paginated 20 per page
+  // Results table (reversed, paginated)
   var resultsHtml = '';
   if (results.length === 0) {
     resultsHtml = '<div class="no-results">No race results yet — add them to the RaceResults tab in Google Sheets</div>';
@@ -369,33 +424,43 @@ async function render() {
     var totalPages = Math.ceil(reversed.length / pageSize);
     var pages = [];
     for (var p = 0; p < totalPages; p++) {
-      var pageRows = reversed.slice(p * pageSize, (p + 1) * pageSize).map(function(r) {
+      var pageRows = reversed.slice(p * pageSize, (p+1) * pageSize).map(function(r) {
         return '<tr>'
-          + '<td class="result-athlete">' + (r.Athlete||'') + '</td>'
-          + '<td>' + (r.Race||'') + '</td>'
-          + '<td class="result-time">' + (r.Time||'—') + '</td>'
-          + '<td>' + milestoneBadge(r.Milestone) + '</td>'
+          + '<td class="result-athlete">'+(r.Athlete||'')+'</td>'
+          + '<td>'+(r.Race||'')+'</td>'
+          + '<td class="result-time">'+(r.Time||'—')+'</td>'
+          + '<td>'+milestoneBadge(r.Milestone)+'</td>'
           + '</tr>';
       }).join('');
       pages.push('<div class="results-page" id="rpage-'+p+'" style="display:'+(p===0?'block':'none')+'">'
         + '<div class="results-wrap"><table class="results-table">'
         + '<thead><tr><th>Athlete</th><th>Race</th><th>Time</th><th>Milestone</th></tr></thead>'
-        + '<tbody>' + pageRows + '</tbody>'
-        + '</table></div>'
-        + '</div>');
+        + '<tbody>'+pageRows+'</tbody>'
+        + '</table></div></div>');
     }
     var pagination = totalPages > 1
       ? '<div class="results-pagination" id="results-pagination">'
-        + (totalPages > 1 ? '<button class="pg-btn" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>' : '')
-        + '<span class="pg-label" id="pg-label">1 / ' + totalPages + '</span>'
-        + (totalPages > 1 ? '<button class="pg-btn" id="pg-next" onclick="changePage(1)">Next →</button>' : '')
+        + '<button class="pg-btn" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>'
+        + '<span class="pg-label" id="pg-label">1 / '+totalPages+'</span>'
+        + '<button class="pg-btn" id="pg-next" onclick="changePage(1)">Next →</button>'
         + '</div>'
       : '';
     resultsHtml = pages.join('') + pagination;
   }
 
+  // Challenge rows
+  var chalRows = challenges.map(function(c) {
+    var isActive = (c.Status||'').toLowerCase() === 'active';
+    return '<div class="crow">'
+      + '<div class="cico">'+chalIcon(c.Icon, c.Status)+'</div>'
+      + '<div><div class="cn">'+c.Name+'</div><div class="cs">'+c.Description+'</div></div>'
+      + '<div class="cstat '+(isActive?'ca':'cd')+'">'+(isActive?'Active':'Done ✓')+'</div>'
+      + '</div>';
+  }).join('');
+
+  // Build full page HTML
   var html = ''
-    + '<div class="sec">Team this week</div>'
+    + '<div class="sec" id="stat-label">Team this week</div>'
     + '<div class="stats">'
     + '<div class="sc"><div class="sv hot">'+Math.round(totalMiles).toLocaleString()+'</div><div class="sl">Total miles</div></div>'
     + '<div class="sc"><div class="sv">'+activeAthletes+'</div><div class="sl">Active athletes</div></div>'
@@ -403,16 +468,13 @@ async function render() {
     + '<div class="sc"><div class="sv hot">'+avgConsistency+'%</div><div class="sl">Consistency rate</div></div>'
     + '</div>'
     + '<div class="sec">Weekly leaderboard</div>'
-    + '<div class="lb">'
-    + '<div class="lbh"><div></div><div>athlete</div><div>miles</div><div>hours</div><div>sessions</div><div>streak</div></div>'
-    + lbRows
+    + '<div class="lb" id="leaderboard">'
+    + '<div class="lbh"><div></div><div class="col-name">athlete</div><div></div><div class="col-num">miles</div><div class="col-num">hours</div><div class="col-num">sessions</div><div class="col-num">streak</div></div>'
+    + buildLbHtml(weekRows, maxMiles)
     + '</div>'
     + '<div class="btm">'
     + '<div class="panel" id="race-panel">'
-    + '<div class="toggle-wrap">'
-    + '<button class="toggle-btn active" onclick="showUpcoming()">Upcoming</button>'
-    + '<button class="toggle-btn" onclick="showResults()">Race Results</button>'
-    + '</div>'
+    + '<div class="toggle-wrap"><button class="toggle-btn active" onclick="showUpcoming()">Upcoming</button><button class="toggle-btn" onclick="showResults()">Race Results</button></div>'
     + '<div id="upcoming-view">'+raceRows+rosterHtml+'</div>'
     + '<div id="results-view" style="display:none">'+resultsHtml+'</div>'
     + '</div>'
@@ -421,36 +483,6 @@ async function render() {
 
   document.getElementById('main-content').innerHTML = html;
 }
-
-var currentPage = 0;
-var totalResultPages = 0;
-
-function changePage(dir) {
-  var pages = document.querySelectorAll('.results-page');
-  if (pages.length === 0) return;
-  totalResultPages = pages.length;
-  pages[currentPage].style.display = 'none';
-  currentPage = Math.max(0, Math.min(currentPage + dir, totalResultPages - 1));
-  pages[currentPage].style.display = 'block';
-  document.getElementById('pg-label').textContent = (currentPage + 1) + ' / ' + totalResultPages;
-  document.getElementById('pg-prev').disabled = currentPage === 0;
-  document.getElementById('pg-next').disabled = currentPage === totalResultPages - 1;
-}
-
-function showUpcoming() {
-  document.getElementById('upcoming-view').style.display = 'block';
-  document.getElementById('results-view').style.display = 'none';
-  document.querySelectorAll('.toggle-btn')[0].classList.add('active');
-  document.querySelectorAll('.toggle-btn')[1].classList.remove('active');
-}
-
-function showResults() {
-  document.getElementById('upcoming-view').style.display = 'none';
-  document.getElementById('results-view').style.display = 'block';
-  document.querySelectorAll('.toggle-btn')[0].classList.remove('active');
-  document.querySelectorAll('.toggle-btn')[1].classList.add('active');
-}
-
 render().catch(function(e){
   document.getElementById('main-content').innerHTML = '<div class="loading">Error loading data — check back shortly</div>';
   console.error(e);
