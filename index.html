@@ -467,7 +467,7 @@ async function render() {
     + '<div class="sc"><div class="sv">'+totalSessions+'</div><div class="sl">Activities logged</div></div>'
     + '<div class="sc"><div class="sv hot">'+avgConsistency+'%</div><div class="sl">Consistency rate</div></div>'
     + '</div>'
-    + '<div class="sec">Weekly leaderboard</div>'
+    + '<div class="sec" id="lb-label">Weekly leaderboard</div>'
     + '<div class="lb" id="leaderboard">'
     + '<div class="lbh"><div></div><div class="col-name">athlete</div><div></div><div class="col-num">miles</div><div class="col-num">hours</div><div class="col-num">sessions</div><div class="col-num">streak</div></div>'
     + buildLbHtml(weekRows, maxMiles)
@@ -492,6 +492,8 @@ function setLbMode(mode) {
   document.getElementById('btn-month').classList.toggle('active', mode === 'month');
   var statLabel = document.getElementById('stat-label');
   if (statLabel) statLabel.textContent = mode === 'month' ? 'Team this month' : 'Team this week';
+  var lbLabel = document.getElementById('lb-label');
+  if (lbLabel) lbLabel.textContent = mode === 'month' ? 'Monthly leaderboard' : 'Weekly leaderboard';
   var rows = window._getLeaderboardRows(mode);
   var maxMi = rows.length ? parseFloat(rows[0].Miles||1) : 1;
   var lb = document.getElementById('leaderboard');
