@@ -448,14 +448,69 @@ async function render() {
     resultsHtml = pages.join('') + pagination;
   }
 
-  // Challenge rows
-  var chalRows = challenges.map(function(c) {
+  // Pre-compute monthly totals for challenge progress bars
+  var now = new Date();
+  var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  var monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  var allWeeks = [...new Set(weekly.map(function(r){ return r.Week; }))].sort().reverse();
+  var monthWeeks = allWeeks.filter(function(w) {
+    var d = new Date(w + 'T00:00:00');
+    return d >= monthStart && d <= monthEnd;
+  });
+  var monthData = weekly.filter(function(r){ return monthWeeks.includes(r.Week); });
+  var monthMiles = monthData.reduce(function(s,r){ return s+parseFloat(r.Miles||0); }, 0);
+  var monthVert  = monthData.reduce(function(s,r){ return s+parseFloat(r.ElevationFeet||0); }, 0);
+  var monthSessions = monthData.reduce(function(s,r){ return s+parseInt(r.Sessions||0); }, 0);
+  var uniqueMonthAthletes = [...new Set(monthData.map(function(r){ return r.Athlete; }))].length;
+
+  function chalProgressBar(pct) {
+    var w = Math.min(100, Math.round(pct));
+    return '<div style="height:2px;background:#1a1a1a;border-radius:1px;margin-top:5px">'
+      + '<div style="height:2px;background:var(--orange);border-radius:1px;width:'+w+'%;transition:width 1s ease"></div>'
+      + '</div>';
+  }
+
+  function buildChalRow(c, progressPct, progressLabel) {
     var isActive = (c.Status||'').toLowerCase() === 'active';
+    var showBar = isActive && progressPct !== null;
     return '<div class="crow">'
       + '<div class="cico">'+chalIcon(c.Icon, c.Status)+'</div>'
-      + '<div><div class="cn">'+c.Name+'</div><div class="cs">'+c.Description+'</div></div>'
-      + '<div class="cstat '+(isActive?'ca':'cd')+'">'+(isActive?'Active':'Done ✓')+'</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div class="cn">'+c.Name+'</div>'
+      + '<div class="cs">'+c.Description+'</div>'
+      + (showBar ? '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:4px"><span>'+progressLabel+'</span><span style="color:var(--orange)">'+Math.min(100,Math.round(progressPct))+'%</span></div>' : '')
+      + (showBar ? chalProgressBar(progressPct) : '')
+      + '</div>'
+      + '<div class="cstat '+(isActive?'ca':'cd')+'">'+(isActive?'':'Done ✓')+'</div>'
       + '</div>';
+  }
+
+  // Challenge rows with smart progress bars
+  var chalRows = challenges.map(function(c) {
+    var name = (c.Name||'').toLowerCase();
+    var isActive = (c.Status||'').toLowerCase() === 'active';
+    var progressPct = null;
+    var progressLabel = '';
+
+    if (isActive) {
+      if (name.includes('consistency')) {
+        // Goal: active athletes x 5 sessions/week x weeks so far this month
+        var weeksInMonthSoFar = Math.max(1, monthWeeks.length);
+        var goal = uniqueMonthAthletes * 5 * weeksInMonthSoFar;
+        progressPct = goal > 0 ? (monthSessions / goal) * 100 : 0;
+        progressLabel = monthSessions + ' / ' + goal + ' sessions';
+      } else if (name.includes('mileage') || name.includes('miles')) {
+        var goal = 500;
+        progressPct = (monthMiles / goal) * 100;
+        progressLabel = Math.round(monthMiles) + ' / ' + goal + ' mi';
+      } else if (name.includes('vert') || name.includes('elevation')) {
+        var goal = 29029;
+        progressPct = (monthVert / goal) * 100;
+        progressLabel = Math.round(monthVert).toLocaleString() + ' / ' + goal.toLocaleString() + ' ft';
+      }
+    }
+
+    return buildChalRow(c, progressPct, progressLabel);
   }).join('');
 
   // Build full page HTML
