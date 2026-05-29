@@ -204,7 +204,8 @@ function parseCSV(text) {
 }
 
 async function fetchCSV(url) {
-  var res = await fetch(url);
+  var res = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+  if (!res.ok) throw new Error('Failed to fetch: ' + url);
   return parseCSV(await res.text());
 }
 
@@ -280,11 +281,11 @@ async function render() {
   document.getElementById('week-label').textContent = weekLabel;
 
   var [weekly, races, challenges, athletes, results] = await Promise.all([
-    fetchCSV(URLS.weekly),
-    fetchCSV(URLS.races),
-    fetchCSV(URLS.challenges),
-    fetchCSV(URLS.athletes),
-    URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results) : Promise.resolve([]),
+    fetchCSV(URLS.weekly).catch(function(){ return []; }),
+    fetchCSV(URLS.races).catch(function(){ return []; }),
+    fetchCSV(URLS.challenges).catch(function(){ return []; }),
+    fetchCSV(URLS.athletes).catch(function(){ return []; }),
+    URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results).catch(function(){ return []; }) : Promise.resolve([]),
   ]);
 
   // Store all weekly data globally for toggle
