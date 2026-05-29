@@ -483,6 +483,71 @@ async function render() {
 
   document.getElementById('main-content').innerHTML = html;
 }
+// ── LEADERBOARD TOGGLE ──────────────────────────────────────
+var lbCurrentPage = 0;
+
+function setLbMode(mode) {
+  lbCurrentPage = 0;
+  document.getElementById('btn-week').classList.toggle('active', mode === 'week');
+  document.getElementById('btn-month').classList.toggle('active', mode === 'month');
+  var statLabel = document.getElementById('stat-label');
+  if (statLabel) statLabel.textContent = mode === 'month' ? 'Team this month' : 'Team this week';
+  var rows = window._getLeaderboardRows(mode);
+  var maxMi = rows.length ? parseFloat(rows[0].Miles||1) : 1;
+  var lb = document.getElementById('leaderboard');
+  if (!lb) return;
+  var header = lb.querySelector('.lbh').outerHTML;
+  lb.innerHTML = header + window._buildLbHtml(rows, maxMi);
+}
+
+function changeLbPage(dir) {
+  var pages = document.querySelectorAll('#leaderboard .lb-page');
+  if (!pages.length) return;
+  pages[lbCurrentPage].style.display = 'none';
+  lbCurrentPage = Math.max(0, Math.min(lbCurrentPage + dir, pages.length - 1));
+  pages[lbCurrentPage].style.display = 'block';
+  var lbl = document.getElementById('lb-pg-label');
+  if (lbl) lbl.textContent = (lbCurrentPage+1) + ' / ' + pages.length;
+  var prev = document.getElementById('lb-prev');
+  var next = document.getElementById('lb-next');
+  if (prev) prev.disabled = lbCurrentPage === 0;
+  if (next) next.disabled = lbCurrentPage === pages.length - 1;
+}
+
+// ── RACE PANEL TOGGLE ────────────────────────────────────────
+function showUpcoming() {
+  document.getElementById('upcoming-view').style.display = 'block';
+  document.getElementById('results-view').style.display = 'none';
+  var btns = document.querySelectorAll('#race-panel .toggle-btn');
+  if (btns[0]) btns[0].classList.add('active');
+  if (btns[1]) btns[1].classList.remove('active');
+}
+
+function showResults() {
+  document.getElementById('upcoming-view').style.display = 'none';
+  document.getElementById('results-view').style.display = 'block';
+  var btns = document.querySelectorAll('#race-panel .toggle-btn');
+  if (btns[0]) btns[0].classList.remove('active');
+  if (btns[1]) btns[1].classList.add('active');
+}
+
+// ── RESULTS PAGINATION ───────────────────────────────────────
+var currentPage = 0;
+
+function changePage(dir) {
+  var pages = document.querySelectorAll('.results-page');
+  if (!pages.length) return;
+  pages[currentPage].style.display = 'none';
+  currentPage = Math.max(0, Math.min(currentPage + dir, pages.length - 1));
+  pages[currentPage].style.display = 'block';
+  var lbl = document.getElementById('pg-label');
+  if (lbl) lbl.textContent = (currentPage+1) + ' / ' + pages.length;
+  var prev = document.getElementById('pg-prev');
+  var next = document.getElementById('pg-next');
+  if (prev) prev.disabled = currentPage === 0;
+  if (next) next.disabled = currentPage === pages.length - 1;
+}
+
 render().catch(function(e){
   document.getElementById('main-content').innerHTML = '<div class="loading">Error loading data — check back shortly</div>';
   console.error(e);
