@@ -488,14 +488,16 @@ function buildMilesChart(weekRows, allWeekly) {
           data: currentData,
           backgroundColor: '#D4521A',
           borderRadius: 2,
-          barPercentage: 0.42,
+          barPercentage: 1.0,
+          categoryPercentage: 0.65,
         },
         {
           label: '6-Wk Avg',
           data: avgData,
           backgroundColor: '#e0dfd8',
           borderRadius: 2,
-          barPercentage: 0.42,
+          barPercentage: 1.0,
+          categoryPercentage: 0.65,
         }
       ]
     },
@@ -696,9 +698,12 @@ async function render() {
       var now = new Date();
       var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       var monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      // Include any week that overlaps with the current month
+      // A week runs Mon-Sun, so include if Monday < monthEnd AND Sunday >= monthStart
       var monthWeeks = weeks.filter(function(w) {
-        var d = new Date(w + 'T00:00:00');
-        return d >= monthStart && d <= monthEnd;
+        var monday = new Date(w + 'T00:00:00');
+        var sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000);
+        return monday <= monthEnd && sunday >= monthStart;
       });
       var byAthlete = {};
       weekly.filter(function(r){ return monthWeeks.includes(r.Week); }).forEach(function(r){
@@ -741,15 +746,25 @@ async function render() {
         var rank = calcRank(r.Athlete, window._allWeekly||[], window._allWeeks||[], window._challenges||[]);
         var badges = calcBadges(r.Athlete, window._allWeekly||[], window._allWeeks||[], window._activities||[]);
         var comeback = isComeback(r.Athlete, window._activities||[]);
-        var rankHtml = rank ? '<span class="rank-badge '+rank.cls+'" title="'+rank.tip+'">'+rank.label+'</span>' : '';
-        var comebackHtml = comeback ? '<span class="comeback">welcome back</span>' : '';
-        var badgeHtml = badges.length ? '<div class="badge-row">'+badges.map(function(b){
-          return '<span class="ach-badge earned">'+b.label+'</span>';
-        }).join('')+'</div>' : '';
+        var rankHtml = rank ? '<span class="rank-badge '+rank.cls+'">'+rank.label+'</span>' : '';
+        var comebackHtml = comeback ? '<span class="comeback">back</span>' : '';
+        // Badge icons — small symbols with tooltip, shown below name
+        var badgeIcons = {
+          'Held the Line': '—', '20 Mile Week': '20', '30 Mile Week': '30',
+          'Sacred Effort': '⚡', '30 Day Streak': '🔥', 'Challenge Complete': '✦'
+        };
+        var badgeHtml = badges.length ? '<div style="display:flex;gap:3px;margin-top:3px">'
+          + badges.map(function(b){
+            return '<span title="'+b.label+'" style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:1px 4px;border:1px solid var(--orange);color:var(--orange);background:#fdf5f1;cursor:default">'+(badgeIcons[b.label]||'·')+'</span>';
+          }).join('') + '</div>' : '';
         return '<div class="lbr">'
           + '<div class="rk'+topClass+'">'+(i+1)+'</div>'
-          + '<div><div style="display:flex;align-items:center;gap:6px"><div class="nm">'+r.Athlete+'</div>'+rankHtml+comebackHtml+'</div>'
-          + (badgeHtml ? badgeHtml : '')
+          + '<div>'
+          + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+          + '<div class="nm">'+r.Athlete+'</div>'
+          + rankHtml + comebackHtml
+          + '</div>'
+          + badgeHtml
           + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
           + '<div></div>'
           + '<div class="lv">'+parseFloat(r.Miles||0).toFixed(1)+'</div>'
@@ -946,6 +961,15 @@ async function render() {
     + buildStatCards(weekRows, prevWeekRows, activeAthletes, allRoster)
     + '</div>'
     + '<div class="sec" id="lb-label">Weekly leaderboard</div>'
+    + '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--rule-light)">'
+    + '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-right:4px">Badges:</span>'
+    + '<span title="Met or exceeded your weekly mileage average" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);cursor:help"><span style="border:1px solid var(--orange);color:var(--orange);padding:0 3px;margin-right:4px">—</span>Held the Line</span>'
+    + '<span title="Logged 20+ run miles in a single week" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);cursor:help"><span style="border:1px solid var(--orange);color:var(--orange);padding:0 3px;margin-right:4px">20</span>20 Mile Wk</span>'
+    + '<span title="Logged 30+ run miles in a single week" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);cursor:help"><span style="border:1px solid var(--orange);color:var(--orange);padding:0 3px;margin-right:4px">30</span>30 Mile Wk</span>'
+    + '<span title="Logged a single session 2x longer than your average session duration" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);cursor:help"><span style="border:1px solid var(--orange);color:var(--orange);padding:0 3px;margin-right:4px">⚡</span>Sacred Effort</span>'
+    + '<span title="30 consecutive days with at least one activity logged" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);cursor:help"><span style="border:1px solid var(--orange);color:var(--orange);padding:0 3px;margin-right:4px">🔥</span>30 Day Streak</span>'
+    + '<span title="Completed the last team challenge" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);cursor:help"><span style="border:1px solid var(--orange);color:var(--orange);padding:0 3px;margin-right:4px">✦</span>Challenge Complete</span>'
+    + '</div>'
     + '<div class="lb" id="leaderboard">'
     + '<div class="lbh"><div></div><div class="col-name">athlete</div><div></div><div class="col-num">miles</div><div class="col-num">hours</div><div class="col-num">sessions</div><div class="col-num">streak</div></div>'
     + buildLbHtml(weekRows, maxMiles)
