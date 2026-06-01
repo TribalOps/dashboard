@@ -961,7 +961,13 @@ async function render() {
   }).join('');
 
   // Build full page HTML
-  var html = ''
+  // Store globals BEFORE building leaderboard html
+  window._allWeeks = weeks;
+  window._activities = activities_raw;
+  window._challenges = challenges;
+  window._allWeekly = weekly;
+
+    var html = ''
     + '<div class="sec" id="stat-label">Team this week</div>'
     + '<div class="stats" id="stat-cards">'
     + buildStatCards(weekRows, prevWeekRows, activeAthletes, allRoster)
@@ -994,11 +1000,6 @@ async function render() {
     + '</div>';
 
   document.getElementById('main-content').innerHTML = html;
-
-  // Store globals for rank/badge calculations
-  window._allWeeks = weeks;
-  window._activities = activities_raw;
-  window._challenges = challenges;
 
   // Build activity feed
   buildFeed(activities_raw, weekRows);
