@@ -76,7 +76,8 @@ body{background:var(--paper);color:var(--text);font-family:'DM Sans',sans-serif;
 .lv{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);text-align:center}
 .dots{display:flex;gap:3px;justify-content:center;list-style:none;padding:0;margin:0}
 .d{width:7px;height:7px;min-width:7px;border-radius:50%;background:var(--rule);display:block;padding:0;margin:0;line-height:1;font-size:0}
-.d.on{background:var(--orange)}
+.d.on{background:#2d7a3a}
+.d.missed{background:#c0392b;min-width:7px}
 .d.half{background:#e8a882}
 .empty-lb{padding:32px;text-align:center;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px}
 .lb-pagination{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}
@@ -153,6 +154,11 @@ body{background:var(--paper);color:var(--text);font-family:'DM Sans',sans-serif;
 /* LOADING */
 .loading{text-align:center;padding:60px 20px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase}
 
+/* LINK HUB */
+.link-hub{display:flex;gap:20px;justify-content:flex-end;padding:8px 0 12px;border-bottom:1px solid var(--rule);margin-bottom:0}
+.hub-link{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);text-decoration:none;transition:color 0.15s}
+.hub-link:hover{color:var(--orange)}
+
 /* TAB NAV */
 .tab-nav{display:flex;gap:0;border-bottom:2px solid var(--black);margin-bottom:24px}
 .tab-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:10px 20px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s}
@@ -215,17 +221,38 @@ body{background:var(--paper);color:var(--text);font-family:'DM Sans',sans-serif;
       <button class="toggle-btn" id="btn-month" onclick="setLbMode('month')">This Month</button>
     </div>
   </div>
+  <!-- LINK HUB -->
+  <div class="link-hub">
+    <a href="https://trainingpeaks.com" target="_blank" class="hub-link">Training Plan →</a>
+    <a href="https://skool.com" target="_blank" class="hub-link">Resources →</a>
+    <a href="https://usemapleboost.com" target="_blank" class="hub-link">Fuel →</a>
+  </div>
   <nav class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
-    <button class="tab-btn" onclick="switchTab('feed')">Activity Feed</button>
-    <button class="tab-btn" onclick="switchTab('athletes')">Athletes</button>
+    <button class="tab-btn active" id="tab-btn-dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab-btn" id="tab-btn-feed" onclick="switchTab('feed')">Activity Feed</button>
+    <button class="tab-btn" id="tab-btn-athletes" onclick="switchTab('athletes')">Athletes</button>
+    <button class="tab-btn" id="tab-btn-challenge" onclick="switchTab('challenge')">30 Day Challenge</button>
   </nav>
   <div id="tab-dashboard" class="tab-pane active">
+    <div id="main-content">
+      <div class="loading">Pulling team data...</div>
+    </div>
   </div>
 
-  <div id="main-content">
-    <div class="loading">Pulling team data<span>.</span></div>
-  
+  <div id="tab-feed" class="tab-pane">
+    <div class="panel" style="margin-bottom:0">
+      <div class="sec" style="margin:0 0 4px">Activity Feed</div>
+      <div id="feed-content"><div class="feed-empty">Loading activities...</div></div>
+    </div>
+  </div>
+
+  <div id="tab-athletes" class="tab-pane">
+    <div id="athletes-content"><div class="feed-empty">Loading athletes...</div></div>
+  </div>
+
+  <div id="tab-challenge" class="tab-pane">
+    <div id="challenge-content"><div class="feed-empty">Loading challenge...</div></div>
+  </div>
 
   <div class="footer"><div>Auto-updates nightly</div><div style="margin-top:5px">Powered by Strava &nbsp;·&nbsp; Fueled by Maple Boost</div></div>
 </div>
@@ -329,15 +356,44 @@ function chalIcon(icon, status) {
 // ── RENDER ───────────────────────────────────────────────────
 // ── HELPERS ─────────────────────────────────────────────────
 
-function buildFireStreak(activeDays) {
-  var n = parseInt(activeDays) || 0;
+function buildFireStreak(activeDays, athleteName, activities) {
+  // Build Mon-Sun dot map for current week
+  var today = new Date();
+  var dayOfWeek = today.getDay(); // 0=Sun
+  var monday = new Date(today);
+  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  monday.setHours(0,0,0,0);
+
+  var myActs = (activities||[]).filter(function(a){ return a.Athlete === athleteName; });
   var dots = '';
+  var streak = 0;
+  var maxStreak = 0;
+  var curStreak = 0;
+
   for (var i = 0; i < 7; i++) {
-    dots += '<div class="d' + (i < n ? ' on' : '') + '"></div>';
+    var d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    var isFuture = d > today;
+    var dateStr = d.toISOString().slice(0,10);
+    var hasAct = myActs.some(function(a){ return (a.Date||'').slice(0,10) === dateStr; });
+
+    if (isFuture) {
+      dots += '<div class="d"></div>';
+    } else if (hasAct) {
+      dots += '<div class="d on"></div>';
+      curStreak++;
+      maxStreak = Math.max(maxStreak, curStreak);
+    } else {
+      dots += '<div class="d missed"></div>';
+      curStreak = 0;
+    }
   }
-  var fire = n >= 5 ? ' 🔥' + n : (n > 0 ? ' <span style="font-size:10px;color:var(--text-dim)">'+n+'</span>' : '');
-  return '<div style="display:flex;align-items:center;gap:4px"><div class="dots">' + dots + '</div>'
-    + '<span style="font-size:10px;color:var(--orange);white-space:nowrap">' + (n >= 5 ? '🔥'+n : '') + '</span></div>';
+
+  var fireHtml = maxStreak >= 5
+    ? '<span style="font-size:10px;color:var(--orange);white-space:nowrap;margin-left:3px">🔥'+maxStreak+'</span>'
+    : (maxStreak > 0 ? '<span style="font-size:9px;color:var(--text-dim);margin-left:3px">'+maxStreak+'</span>' : '');
+
+  return '<div style="display:flex;align-items:center"><div class="dots">' + dots + '</div>' + fireHtml + '</div>';
 }
 
 function trendArrow(current, prior) {
@@ -598,13 +654,10 @@ function isComeback(athleteName, activities) {
 function switchTab(tab) {
   document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
-  document.getElementById('tab-'+tab).classList.add('active');
-  document.querySelectorAll('.tab-btn').forEach(function(b){
-    if (b.textContent.toLowerCase().includes(tab === 'dashboard' ? 'dashboard' : tab === 'feed' ? 'feed' : 'athlete')) {
-      b.classList.add('active');
-    }
-  });
-  // Hide/show the week toggle — only relevant on dashboard
+  var pane = document.getElementById('tab-'+tab);
+  var btn  = document.getElementById('tab-btn-'+tab);
+  if (pane) pane.classList.add('active');
+  if (btn)  btn.classList.add('active');
   var toggle = document.getElementById('lb-toggle');
   if (toggle) toggle.style.visibility = tab === 'dashboard' ? 'visible' : 'hidden';
 }
@@ -683,7 +736,7 @@ async function render() {
         var i = p * pageSize + idx;
         var pct = Math.round((parseFloat(r.Miles||0) / maxMi) * 100);
         var topClass = i < 3 ? ' t' : '';
-        var fire = buildFireStreak(r.ActiveDays);
+        var fire = buildFireStreak(r.ActiveDays, r.Athlete, window._activities||[]);
         var rank = calcRank(r.Athlete, window._allWeekly||[], window._allWeeks||[], window._challenges||[]);
         var badges = calcBadges(r.Athlete, window._allWeekly||[], window._allWeeks||[], window._activities||[]);
         var comeback = isComeback(r.Athlete, window._activities||[]);
@@ -906,7 +959,7 @@ async function render() {
     + '<div id="upcoming-view">'+raceRows+rosterHtml+'</div>'
     + '<div id="results-view" style="display:none">'+resultsHtml+'</div>'
     + '</div>'
-    + '<div class="panel"><div class="sec" style="margin:0 0 10px">Challenges</div>'+chalRows+'</div>'
+    + '<div class="panel" id="challenge-panel"><div class="sec" style="margin:0 0 10px">30 Day Tribal Challenge</div><div id="inline-challenge">'+buildInlineChallenge(activities_raw)+'</div></div>'
     + '</div>';
 
   document.getElementById('main-content').innerHTML = html;
@@ -921,6 +974,9 @@ async function render() {
 
   // Build athletes tab
   buildAthletesTab(weekRows, weekly, weeks, challenges, activities_raw);
+
+  // Build challenge tab
+  buildChallengeTab(activities_raw);
 
   // Build chart after DOM is ready
   setTimeout(function() {
@@ -1009,6 +1065,139 @@ function changePage(dir) {
   var next = document.getElementById('pg-next');
   if (prev) prev.disabled = currentPage === 0;
   if (next) next.disabled = currentPage === pages.length - 1;
+}
+
+// ── 30 DAY CHALLENGE ────────────────────────────────────────
+var CHALLENGE_START = new Date('2026-06-10T00:00:00');
+var CHALLENGE_END   = new Date('2026-07-10T23:59:59');
+
+var MILESTONES = [
+  {
+    id: 'M1',
+    label: '5 Mile Best Effort',
+    desc: 'Run 5 miles — any pace, full effort',
+    detect: function(a) {
+      var mi = parseFloat(a.DistanceMiles||0);
+      return a.Type === 'Run' && mi >= 4.8 && mi <= 5.5;
+    }
+  },
+  {
+    id: 'M2',
+    label: '5 Mile Progressive',
+    desc: 'Run 5 miles progressive at M1 overall pace',
+    detect: function(a) {
+      var mi = parseFloat(a.DistanceMiles||0);
+      return a.Type === 'Run' && mi >= 4.8 && mi <= 5.5;
+    }
+  },
+  {
+    id: 'M3',
+    label: '5 × 1 Mile Repeats',
+    desc: '5 x 1 mile at best/final mile pace',
+    detect: function(a) {
+      var mi = parseFloat(a.DistanceMiles||0);
+      return a.Type === 'Run' && mi >= 4.5 && mi <= 6.5;
+    }
+  },
+  {
+    id: 'M4',
+    label: '5K Test',
+    desc: 'All-out 5K effort',
+    detect: function(a) {
+      var mi = parseFloat(a.DistanceMiles||0);
+      return a.Type === 'Run' && mi >= 2.9 && mi <= 3.3;
+    }
+  }
+];
+
+function buildChallengeTab(activities) {
+  var el = document.getElementById('challenge-content');
+  if (!el) return;
+  el.innerHTML = buildChallengeHTML(activities, true);
+}
+
+function buildInlineChallenge(activities) {
+  return buildChallengeHTML(activities, false);
+}
+
+function buildChallengeHTML(activities, fullView) {
+  var now = new Date();
+  var challengeActs = activities.filter(function(a) {
+    var d = new Date(a.Date + 'T00:00:00');
+    return d >= CHALLENGE_START && d <= CHALLENGE_END;
+  });
+
+  // Get unique athletes in challenge
+  var allAthletes = [...new Set(activities.map(function(a){ return a.Athlete; }))];
+
+  // Total miles + time during challenge
+  var totalMiles = challengeActs.reduce(function(s,a){ return s+parseFloat(a.DistanceMiles||0); },0);
+  var totalSecs  = challengeActs.reduce(function(s,a){ return s+parseFloat(a.MovingTimeSecs||0); },0);
+  var totalHours = (totalSecs/3600).toFixed(1);
+
+  // Days into challenge
+  var daysIn = Math.max(0, Math.min(30, Math.floor((now - CHALLENGE_START)/(1000*60*60*24))));
+  var pct = Math.min(100, Math.round((daysIn/30)*100));
+
+  var isFuture = now < CHALLENGE_START;
+  var isActive = now >= CHALLENGE_START && now <= CHALLENGE_END;
+
+  if (isFuture) {
+    var daysTo = Math.ceil((CHALLENGE_START - now)/(1000*60*60*24));
+    return '<div style="text-align:center;padding:20px 0">'
+      + '<div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--black)">Starts June 10</div>'
+      + '<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1px;margin-top:6px">'+daysTo+' days away</div>'
+      + '</div>';
+  }
+
+  // Progress bar
+  var progressHtml = '<div style="margin-bottom:16px">'
+    + '<div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">'
+    + '<span>Day '+daysIn+' of 30</span><span style="color:var(--orange)">'+pct+'%</span></div>'
+    + '<div style="height:3px;background:var(--rule)">'
+    + '<div style="height:3px;background:var(--orange);width:'+pct+'%;transition:width 1s ease"></div></div>'
+    + '<div style="display:flex;gap:20px;margin-top:10px">'
+    + '<div><div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--orange)">'+Math.round(totalMiles)+'</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase">Team Miles</div></div>'
+    + '<div><div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--black)">'+totalHours+'</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase">Team Hours</div></div>'
+    + '</div></div>';
+
+  // Milestone checkboxes per athlete
+  var athleteRows = allAthletes.map(function(name) {
+    var myActs = challengeActs.filter(function(a){ return a.Athlete === name; });
+    // Each milestone must be completed in order
+    var checks = '';
+    var prevDone = true;
+    MILESTONES.forEach(function(m, idx) {
+      var done = prevDone && myActs.some(function(a){ return m.detect(a); });
+      // M2, M3, M4 need prior milestone done
+      if (idx > 0) done = done && myActs.some(function(a){ return MILESTONES[idx-1].detect(a); });
+      checks += '<div title="'+m.label+': '+m.desc+'" style="width:18px;height:18px;border:1px solid '+(done?'var(--orange)':'var(--rule)')+';background:'+(done?'var(--orange)':'transparent')+';display:flex;align-items:center;justify-content:center;font-size:10px;cursor:default">'
+        + (done ? '<span style="color:#fff">✓</span>' : '')
+        + '</div>';
+    });
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule-light)">'
+      + '<div style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--black);width:140px;flex-shrink:0">'+name+'</div>'
+      + '<div style="display:flex;gap:6px">'+checks+'</div>'
+      + '</div>';
+  }).join('');
+
+  // Milestone legend
+  var legend = '<div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">'
+    + MILESTONES.map(function(m,i){
+      return '<div style="display:flex;align-items:center;gap:5px">'
+        + '<div style="width:16px;height:16px;border:1px solid var(--orange);background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
+        + '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.5px">'+m.label+'</div>'
+        + '</div>';
+    }).join('') + '</div>';
+
+  return progressHtml + legend
+    + '<div>'
+    + '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--rule)">'
+    + '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);width:140px;flex-shrink:0">Athlete</div>'
+    + MILESTONES.map(function(m,i){ return '<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);width:18px;text-align:center">'+(i+1)+'</div>'; }).join('')
+    + '</div>'
+    + athleteRows
+    + '</div>';
 }
 
 // ── ACTIVITY FEED ───────────────────────────────────────────
