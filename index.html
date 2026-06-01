@@ -580,16 +580,7 @@ function calcBadges(athleteName, allWeekly, weeks, activities) {
   var myActivities = activities.filter(function(a){ return a.Athlete === athleteName; });
   var myWeeks = allWeekly.filter(function(r){ return r.Athlete === athleteName; });
   var last6 = weeks.slice(0, 6);
-  var firstAthlete = (window._allWeekly||[]).length > 0 ? window._allWeekly[0].Athlete : null;
-  if (athleteName === firstAthlete) {
-    console.log('calcBadges debug for', athleteName);
-    console.log('  activities total:', activities.length, 'mine:', myActivities.length);
-    console.log('  weekly total:', allWeekly.length, 'mine:', myWeeks.length);
-    console.log('  weeks:', JSON.stringify(weeks.slice(0,3)));
-    console.log('  sample activity names:', JSON.stringify(activities.slice(0,3).map(function(a){return a.Athlete;})));
-    if (myActivities.length > 0) console.log('  sample activity:', JSON.stringify(myActivities[0]));
-    if (myWeeks.length > 0) console.log('  sample week:', JSON.stringify(myWeeks[0]));
-  }
+  console.log('calcBadges:', athleteName, '| acts:', myActivities.length, '| weeks:', myWeeks.length, '| allActs:', activities.length);
 
   // Rolling avg miles
   var avgMiles = 0;
