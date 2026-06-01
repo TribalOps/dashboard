@@ -767,14 +767,19 @@ async function render() {
           + badges.map(function(b){
             return '<span title="'+b.label+'" style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:1px 4px;border:1px solid var(--orange);color:var(--orange);background:#fdf5f1;cursor:default">'+(badgeIcons[b.label]||'·')+'</span>';
           }).join('') + '</div>' : '';
+        // Build unified sub-row: rank + badges + comeback all together below name
+        var subItems = '';
+        if (rank) subItems += '<span class="rank-badge '+rank.cls+'">'+rank.label+'</span>';
+        subItems += badges.map(function(b){
+          return '<span title="'+b.label+'" style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:1px 4px;border:1px solid var(--orange);color:var(--orange);background:#fdf5f1;cursor:help">'+(badgeIcons[b.label]||'·')+'</span>';
+        }).join('');
+        if (comeback) subItems += '<span title="No activity logged in 3+ days — welcome back" style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:1px 5px;border:1px solid #2d7a3a;color:#2d7a3a;background:#eefbf2;cursor:help">welcome back</span>';
+
         return '<div class="lbr">'
           + '<div class="rk'+topClass+'">'+(i+1)+'</div>'
           + '<div>'
-          + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
           + '<div class="nm">'+r.Athlete+'</div>'
-          + rankHtml + comebackHtml
-          + '</div>'
-          + badgeHtml
+          + (subItems ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">'+subItems+'</div>' : '')
           + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
           + '<div></div>'
           + '<div class="lv">'+parseFloat(r.Miles||0).toFixed(1)+'</div>'
