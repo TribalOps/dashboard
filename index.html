@@ -231,7 +231,7 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
     <button class="tab-btn active" id="tab-btn-dashboard" onclick="switchTab('dashboard')">Dashboard</button>
     <button class="tab-btn" id="tab-btn-feed" onclick="switchTab('feed')">Activity Feed</button>
     <button class="tab-btn" id="tab-btn-athletes" onclick="switchTab('athletes')">Athletes</button>
-    <button class="tab-btn" id="tab-btn-challenge" onclick="switchTab('challenge')">30 Day Challenge</button>
+    <button class="tab-btn" id="tab-btn-challenge" onclick="switchTab('challenge')">Tribal Territories</button>
   </nav>
   <div id="tab-dashboard" class="tab-pane active">
     <div id="main-content">
@@ -270,7 +270,7 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
 
       <!-- RIGHT: Active Challenge -->
       <div>
-        <div id="challenge-content"><div class="feed-empty">Loading challenge...</div></div>
+        <div id="challenge-content"><div class="feed-empty">Loading Tribal Territories...<//div></div>
       </div>
 
     </div>
@@ -441,16 +441,16 @@ function buildCountdownCards(challenges, athletes_roster) {
   var challengeDays, challengeLabel, challengeSub;
   if (challengeFuture) {
     challengeDays = Math.ceil((challengeStart - now) / (1000*60*60*24));
-    challengeLabel = 'Days to Challenge';
-    challengeSub = 'June 10 start';
+    challengeLabel = 'Days to Territories';
+    challengeSub = 'June 10 launch';
   } else if (challengeLive) {
     challengeDays = Math.ceil((challengeEnd - now) / (1000*60*60*24));
     challengeLabel = 'Days Remaining';
-    challengeSub = '30 Day Challenge';
+    challengeSub = 'Tribal Territories';
   } else {
     challengeDays = 0;
     challengeLabel = 'Challenge Complete';
-    challengeSub = '30 Day Challenge';
+    challengeSub = 'Tribal Territories';
   }
 
   // Athletes in challenge — count signups from races sheet or just show roster size
@@ -1111,7 +1111,7 @@ async function render() {
     + '<div id="upcoming-view">'+raceRows+rosterHtml+'</div>'
     + '<div id="results-view" style="display:none">'+resultsHtml+'</div>'
     + '</div>'
-    + '<div class="panel" id="challenge-panel"><div class="sec" style="margin:0 0 10px">30 Day Tribal Challenge</div><div id="inline-challenge">'+buildInlineChallenge(activities_raw, window._athletesRoster||[])+'</div></div>'
+    + '<div class="panel" id="challenge-panel"><div class="sec" style="margin:0 0 10px">Tribal Territories</div><div id="inline-challenge">'+buildInlineChallenge(activities_raw, window._athletesRoster||[])+'</div></div>'
     + '</div>';
 
   document.getElementById('main-content').innerHTML = html;
