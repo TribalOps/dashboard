@@ -252,41 +252,27 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
 
   <div id="tab-challenge" class="tab-pane">
     <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start">
+
+      <!-- LEFT: Past Challenges -->
       <div class="panel">
         <div class="sec" style="margin:0 0 12px">Past Challenges</div>
         <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">2025 – 2026</div>
         <div style="display:flex;flex-direction:column;gap:0">
-          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px">
-            <span style="color:var(--orange);font-size:10px">✓</span>
-            <span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">40 Running Miles in 4 Days</span>
-          </div>
-          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px">
-            <span style="color:var(--orange);font-size:10px">✓</span>
-            <span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">8k Vert in 1 Week</span>
-          </div>
-          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px">
-            <span style="color:var(--orange);font-size:10px">✓</span>
-            <span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">Run 5 Miles in 40 Minutes</span>
-          </div>
-          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px">
-            <span style="color:var(--orange);font-size:10px">✓</span>
-            <span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">5 Mile PR as Progressive Run</span>
-          </div>
-          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px">
-            <span style="color:var(--orange);font-size:10px">✓</span>
-            <span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">1 Mile Challenge</span>
-          </div>
-          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px">
-            <span style="color:var(--orange);font-size:10px">✓</span>
-            <span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">400M & 200M Swim Test</span>
-          </div>
-          <div style="padding:8px 0;display:flex;align-items:baseline;gap:8px">
-            <span style="color:var(--orange);font-size:10px">✓</span>
-            <span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">6 Day Bike Ladder Challenge</span>
-          </div>
+          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px"><span style="color:var(--orange);font-size:10px">✓</span><span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">40 Running Miles in 4 Days</span></div>
+          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px"><span style="color:var(--orange);font-size:10px">✓</span><span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">8k Vert in 1 Week</span></div>
+          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px"><span style="color:var(--orange);font-size:10px">✓</span><span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">Run 5 Miles in 40 Minutes</span></div>
+          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px"><span style="color:var(--orange);font-size:10px">✓</span><span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">5 Mile PR as Progressive Run</span></div>
+          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px"><span style="color:var(--orange);font-size:10px">✓</span><span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">1 Mile Challenge</span></div>
+          <div style="padding:8px 0;border-bottom:1px solid var(--rule-light);display:flex;align-items:baseline;gap:8px"><span style="color:var(--orange);font-size:10px">✓</span><span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">400M & 200M Swim Test</span></div>
+          <div style="padding:8px 0;display:flex;align-items:baseline;gap:8px"><span style="color:var(--orange);font-size:10px">✓</span><span style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--black)">6 Day Bike Ladder Challenge</span></div>
         </div>
       </div>
-      <div id="challenge-content"><div class="feed-empty">Loading challenge...</div></div>
+
+      <!-- RIGHT: Active Challenge -->
+      <div>
+        <div id="challenge-content"><div class="feed-empty">Loading challenge...</div></div>
+      </div>
+
     </div>
   </div>
 
@@ -650,6 +636,31 @@ function buildMilesChart(weekRows, allWeekly) {
     }
   });
 }
+
+// ── TERRITORY ASSIGNMENT ────────────────────────────────────
+var WEST_STATES = ['MT','ID','WY','CO','UT','NV','AZ','NM','CA','OR','WA','AK','HI','AU','NSW','VIC','QLD','WA','SA','TAS','NT','ACT'];
+var SOUTH_STATES = ['TX','OK','AR','LA','MS','AL','TN','KY','WV','VA','NC','SC','GA','FL'];
+// North = everything else including all Canadian provinces and UK
+
+function getTerritory(state) {
+  if (!state) return null;
+  var s = state.trim().toUpperCase();
+  if (WEST_STATES.indexOf(s) > -1) return 'west';
+  if (SOUTH_STATES.indexOf(s) > -1) return 'south';
+  // Canada provinces
+  var canada = ['ON','QC','BC','AB','MB','SK','NS','NB','NL','PE','NT','NU','YT'];
+  // UK
+  var uk = ['UK','ENG','SCO','WAL','NIR','ENGLAND','SCOTLAND','WALES'];
+  if (canada.indexOf(s) > -1 || uk.indexOf(s) > -1) return 'north';
+  // US states default
+  return 'north';
+}
+
+var TERRITORY_CONFIG = {
+  north: { label: 'Tribal North',  color: '#2a5f9e', bg: '#eef4fb', border: '#a0c0e8' },
+  south: { label: 'Tribal South',  color: '#c0392b', bg: '#fbeeee', border: '#e8a0a0' },
+  west:  { label: 'Tribal West',   color: '#c8900a', bg: '#fdf8ee', border: '#e8c870' },
+};
 
 // ── RANK CALCULATION ────────────────────────────────────────
 function calcRank(athleteName, allWeekly, weeks, challenges) {
@@ -1077,6 +1088,7 @@ async function render() {
   window._activities = activities_raw;
   window._challenges = challenges;
   window._allWeekly = weekly;
+  window._athletesRoster = athletes_roster;
 
     var html = ''
     + '<div class="sec" id="stat-label">Team this week</div>'
@@ -1099,7 +1111,7 @@ async function render() {
     + '<div id="upcoming-view">'+raceRows+rosterHtml+'</div>'
     + '<div id="results-view" style="display:none">'+resultsHtml+'</div>'
     + '</div>'
-    + '<div class="panel" id="challenge-panel"><div class="sec" style="margin:0 0 10px">30 Day Tribal Challenge</div><div id="inline-challenge">'+buildInlineChallenge(activities_raw)+'</div></div>'
+    + '<div class="panel" id="challenge-panel"><div class="sec" style="margin:0 0 10px">30 Day Tribal Challenge</div><div id="inline-challenge">'+buildInlineChallenge(activities_raw, window._athletesRoster||[])+'</div></div>'
     + '</div>';
 
   document.getElementById('main-content').innerHTML = html;
@@ -1111,7 +1123,7 @@ async function render() {
   buildAthletesTab(weekRows, weekly, weeks, challenges, activities_raw);
 
   // Build challenge tab
-  buildChallengeTab(activities_raw);
+  buildChallengeTab(activities_raw, athletes_roster);
 
   // Build chart after DOM is ready
   setTimeout(function() {
@@ -1245,17 +1257,17 @@ var MILESTONES = [
   }
 ];
 
-function buildChallengeTab(activities) {
+function buildChallengeTab(activities, athletesRoster) {
   var el = document.getElementById('challenge-content');
   if (!el) return;
-  el.innerHTML = buildChallengeHTML(activities, true);
+  el.innerHTML = buildChallengeHTML(activities, true, athletesRoster);
 }
 
-function buildInlineChallenge(activities) {
-  return buildChallengeHTML(activities, false);
+function buildInlineChallenge(activities, athletesRoster) {
+  return buildChallengeHTML(activities, false, athletesRoster);
 }
 
-function buildChallengeHTML(activities, fullView) {
+function buildChallengeHTML(activities, fullView, athletesRoster) {
   var now = new Date();
   var challengeActs = activities.filter(function(a) {
     var d = new Date(a.Date + 'T00:00:00');
@@ -1325,14 +1337,95 @@ function buildChallengeHTML(activities, fullView) {
         + '</div>';
     }).join('') + '</div>';
 
-  return progressHtml + legend
+  // ── TERRITORY STANDINGS ─────────────────────────────────
+  var territoryStats = { north: {miles:0,athletes:0}, south: {miles:0,athletes:0}, west: {miles:0,athletes:0} };
+  if (athletesRoster && athletesRoster.length) {
+    athletesRoster.forEach(function(a) {
+      var territory = getTerritory(a.State);
+      if (!territory) return;
+      var myMiles = challengeActs.filter(function(act){ return act.Athlete === a.Name; })
+        .reduce(function(s,act){ return s+parseFloat(act.DistanceMiles||0); }, 0);
+      territoryStats[territory].miles += myMiles;
+      if (myMiles > 0) territoryStats[territory].athletes++;
+    });
+  }
+
+  var maxTerritoryMiles = Math.max(1, territoryStats.north.miles, territoryStats.south.miles, territoryStats.west.miles);
+
+  var territoryHtml = '<div style="margin:20px 0 16px">'
+    + '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--rule)">Territory Standings</div>'
+    + ['north','south','west'].map(function(t) {
+        var cfg = TERRITORY_CONFIG[t];
+        var stats = territoryStats[t];
+        var pct = Math.round((stats.miles / maxTerritoryMiles) * 100);
+        return '<div style="margin-bottom:12px">'
+          + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">'
+          + '<span style="font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;color:'+cfg.color+'">'+cfg.label+'</span>'
+          + '<span style="font-family:IBM Plex Mono,monospace;font-size:11px;color:'+cfg.color+'">'+Math.round(stats.miles)+' mi</span>'
+          + '</div>'
+          + '<div style="height:6px;background:var(--rule);border-radius:0">'
+          + '<div style="height:6px;background:'+cfg.color+';width:'+pct+'%;transition:width 1s ease"></div>'
+          + '</div>'
+          + '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);margin-top:3px">'+stats.athletes+' active athletes</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+
+  // ── BINGO CARD ───────────────────────────────────────────
+  var bingoSquares = [
+    {text:'Sunrise Run', orange:false},
+    {text:'3 Day Run Streak', orange:true},
+    {text:'Trail Run', orange:true},
+    {text:'Zone 2 Run', orange:false},
+    {text:'170+ Cadence Run', orange:true},
+    {text:'Hilly Run', orange:false},
+    {text:'Journal After Your Run', orange:true},
+    {text:'Run With No Headphones', orange:true},
+    {text:'Run in the Rain', orange:false},
+    {text:'Run After Dark', orange:true},
+    {text:'Fuel with Maple Boost', orange:false},
+    {text:'Long Run (2x mileage)', orange:true},
+    {text:'FREE', orange:false, free:true},
+    {text:'Post-Run Ice Bath', orange:false},
+    {text:'Run a New Route', orange:false},
+    {text:'5k Project: 5k Test Effort (Wk 4)', orange:true},
+    {text:'Run Midday (in the heat)', orange:false},
+    {text:'Negative Split', orange:true},
+    {text:'25 Miles in a Week', orange:true},
+    {text:'5k Project: 5x1 Mile (Wk 3)', orange:true},
+    {text:'Run with a Friend', orange:false},
+    {text:'5 Min Jump Rope Pre-Run', orange:true},
+    {text:'Do 25 Pushups Every Mile', orange:true},
+    {text:'Run/Walk', orange:false},
+    {text:'Sunset Run', orange:true},
+  ];
+
+  var bingoHtml = '<div style="margin-top:20px">'
+    + '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--rule)">Tribal Bingo</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:var(--black)">'
+    + bingoSquares.map(function(sq) {
+        var bg = sq.free ? '#fdf5f1' : 'var(--surface)';
+        var color = sq.free ? 'var(--orange)' : (sq.orange ? 'var(--orange)' : 'var(--black)');
+        var weight = sq.orange || sq.free ? '500' : '400';
+        return '<div style="background:'+bg+';padding:7px 5px;text-align:center;min-height:52px;display:flex;align-items:center;justify-content:center">'
+          + '<span style="font-family:DM Sans,sans-serif;font-size:10px;color:'+color+';font-weight:'+weight+';line-height:1.3">'+sq.text+'</span>'
+          + '</div>';
+      }).join('')
+    + '</div></div>';
+
+  return '<div style="font-family:Playfair Display,serif;font-size:22px;font-weight:700;color:var(--black);margin-bottom:4px">The Tribal Territories</div>'
+    + '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;display:flex;gap:16px">'
+    + '<span style="color:#2a5f9e">❄ North</span><span style="color:#c0392b">🔥 South</span><span style="color:#c8900a">⛰ West</span>'
+    + '</div>'
+    + progressHtml + territoryHtml + legend
     + '<div>'
     + '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--rule)">'
     + '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);width:140px;flex-shrink:0">Athlete</div>'
     + MILESTONES.map(function(m,i){ return '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--text-muted);width:18px;text-align:center">'+(i+1)+'</div>'; }).join('')
     + '</div>'
     + athleteRows
-    + '</div>';
+    + '</div>'
+    + bingoHtml;
 }
 
 // ── ACTIVITY FEED ───────────────────────────────────────────
