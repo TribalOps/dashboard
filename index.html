@@ -889,10 +889,24 @@ async function render() {
             return '<span title="'+b.label+'" style="font-family:IBM Plex Mono,monospace;font-size:8px;padding:1px 4px;border:1px solid var(--orange);color:var(--orange);background:#fdf5f1;cursor:default">'+(badgeIcons[b.label]||'·')+'</span>';
           }).join('') + '</div>' : '';
         // Build unified sub-row: rank + badges + comeback all together below name
+        // Territory dot
+        var athleteState = '';
+        if (window._athletesRoster) {
+          var rosterEntry = window._athletesRoster.find(function(a){ return a.Name === r.Athlete; });
+          if (rosterEntry) athleteState = rosterEntry.State || '';
+        }
+        var territory = getTerritory(athleteState);
+        var territoryDot = territory
+          ? '<span title="'+TERRITORY_CONFIG[territory].label+'" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+TERRITORY_CONFIG[territory].color+';margin-left:6px;flex-shrink:0;vertical-align:middle"></span>'
+          : '';
+
         return '<div class="lbr">'
           + '<div class="rk'+topClass+'">'+(i+1)+'</div>'
           + '<div>'
+          + '<div style="display:flex;align-items:center">'
           + '<div class="nm">'+r.Athlete+'</div>'
+          + territoryDot
+          + '</div>'
           + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
           + '<div></div>'
           + '<div class="lv">'+parseFloat(r.Miles||0).toFixed(1)+'</div>'
