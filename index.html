@@ -554,23 +554,17 @@ function buildMilesChart(weekRows, allWeekly) {
       d.setDate(d.getDate() - (day===0?6:day-1) + 6); d.setHours(23,59,59,0);
       return d.toISOString().slice(0,10);
     })();
-    var weekMiles = runActs.filter(function(a){
-      return a.Athlete === name && a.Date >= mondayStr && a.Date <= sundayStr;
-    }).reduce(function(s,a){ return s+parseFloat(a.DistanceMiles||0); }, 0);
-    currentMiles[name] = parseFloat(weekMiles.toFixed(1));
+    // Total miles (all sports) for chart
+    var row = weekRows.find(function(r){ return r.Athlete === name; });
+    currentMiles[name] = row ? parseFloat(parseFloat(row.Miles||0).toFixed(1)) : 0;
   });
 
-  // 6-week rolling avg run miles per athlete
+  // 6-week rolling avg total miles from WeeklySummary
   var rollingAvg = {};
   athletes.forEach(function(name) {
-    var vals = weeks.map(function(w) {
-      var monday = new Date(w+'T00:00:00');
-      var sunday = new Date(monday.getTime() + 6*24*60*60*1000);
-      var mondayStr = monday.toISOString().slice(0,10);
-      var sundayStr = sunday.toISOString().slice(0,10);
-      return runActs.filter(function(a){
-        return a.Athlete === name && a.Date >= mondayStr && a.Date <= sundayStr;
-      }).reduce(function(s,a){ return s+parseFloat(a.DistanceMiles||0); }, 0);
+    var vals = weeks.slice(0,6).map(function(w) {
+      var row = weekly.find(function(r){ return r.Athlete === name && r.Week === w; });
+      return row ? parseFloat(row.Miles||0) : 0;
     });
     rollingAvg[name] = vals.length > 0 ? parseFloat((vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1)) : 0;
   });
@@ -590,7 +584,7 @@ function buildMilesChart(weekRows, allWeekly) {
       labels: labels,
       datasets: [
         {
-          label: 'This Week',
+          label: 'This Week (all)',
           data: currentData,
           backgroundColor: '#D4521A',
           borderRadius: 2,
@@ -598,7 +592,7 @@ function buildMilesChart(weekRows, allWeekly) {
           categoryPercentage: 0.65,
         },
         {
-          label: '6-Wk Avg',
+          label: '6-Wk Avg (all)',
           data: avgData,
           backgroundColor: '#e0dfd8',
           borderRadius: 2,
@@ -1134,11 +1128,11 @@ async function render() {
     + '<div class="sec" id="lb-label">Weekly leaderboard</div>'
 
     + '<div class="lb" id="leaderboard">'
-    + '<div class="lbh"><div></div><div class="col-name">athlete</div><div></div><div class="col-num">miles</div><div class="col-num">hours</div><div class="col-num">sessions</div><div class="col-num">streak</div></div>'
+    + '<div class="lbh"><div></div><div class="col-name">athlete</div><div></div><div class="col-num">run mi</div><div class="col-num">hours</div><div class="col-num">sessions</div><div class="col-num">streak</div></div>'
     + buildLbHtml(weekRows, maxMiles)
     + '</div>'
     + '<div class="chart-panel">'
-    + '<div class="sec" style="margin:0 0 12px">Miles This Week vs 6-Week Avg</div>'
+    + '<div class="sec" style="margin:0 0 12px">Total Miles — This Week vs 6-Week Avg</div>'
     + '<div class="chart-wrap"><canvas id="milesChart"></canvas></div>'
     + '</div>'
     + '<div class="btm">'
