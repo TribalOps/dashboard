@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap');
 
@@ -72,7 +72,7 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
 .rk.t{color:var(--orange);font-weight:500}
 .nm{font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-wrap{height:2px;background:var(--rule);margin-top:5px}
-.bar-fill{height:2px;background:var(--orange);transition:width 1s ease}
+.bar-fill{height:2px;background:var(--orange);transition:width 1s ease;max-width:100%}
 .lv{font-family:IBM Plex Mono,monospace;font-size:12px;color:var(--ink);text-align:center}
 .dots{display:flex;gap:3px;justify-content:center;list-style:none;padding:0;margin:0}
 .d{width:7px;height:7px;min-width:7px;border-radius:50%;background:var(--rule);display:block;padding:0;margin:0;line-height:1;font-size:0}
@@ -866,7 +866,7 @@ async function render() {
       var rowsHtml = slice.map(function(r, idx) {
         var i = p * pageSize + idx;
         var rom = window._runOnlyMiles || {};
-        var pct = Math.round(((rom[r.Athlete]||0) / maxMi) * 100);
+        var pct = Math.min(100, Math.round(((rom[r.Athlete]||0) / maxMi) * 100));
         var topClass = i < 3 ? ' t' : '';
         var fire = buildFireStreak(r.ActiveDays, r.Athlete, window._activities||[]);
         var rank = calcRank(r.Athlete, window._allWeekly||[], window._allWeeks||[], window._challenges||[]);
