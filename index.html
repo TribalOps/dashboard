@@ -871,7 +871,8 @@ async function render() {
       var slice = rows.slice(p * pageSize, (p+1) * pageSize);
       var rowsHtml = slice.map(function(r, idx) {
         var i = p * pageSize + idx;
-        var pct = Math.round(((runOnlyMiles[r.Athlete]||0) / maxMi) * 100);
+        var rom = window._runOnlyMiles || {};
+        var pct = Math.round(((rom[r.Athlete]||0) / maxMi) * 100);
         var topClass = i < 3 ? ' t' : '';
         var fire = buildFireStreak(r.ActiveDays, r.Athlete, window._activities||[]);
         var rank = calcRank(r.Athlete, window._allWeekly||[], window._allWeeks||[], window._challenges||[]);
@@ -909,7 +910,7 @@ async function render() {
           + '</div>'
           + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
           + '<div></div>'
-          + '<div class="lv">'+(runOnlyMiles[r.Athlete]||0).toFixed(1)+'</div>'
+          + '<div class="lv">'+((window._runOnlyMiles||{})[r.Athlete]||0).toFixed(1)+'</div>'
           + '<div class="lv">'+parseFloat(r.Hours||0).toFixed(1)+'</div>'
           + '<div class="lv">'+( r.Sessions||0)+'</div>'
           + fire
@@ -931,7 +932,7 @@ async function render() {
   // Week leaderboard data
   var weekRows = getLeaderboardRows('week');
   var maxMiles = weekRows.length
-    ? Math.max(1, Math.max.apply(null, weekRows.map(function(r){ return runOnlyMiles[r.Athlete]||0; })))
+    ? Math.max(1, Math.max.apply(null, weekRows.map(function(r){ return (window._runOnlyMiles||{})[r.Athlete]||0; })))
     : 1;
 
   // Previous week rows for trend arrows
@@ -1107,7 +1108,8 @@ async function render() {
   window._athletesRoster = athletes_roster;
 
   // Pre-calculate run-only miles for current week per athlete
-  var runOnlyMiles = {};
+  window._runOnlyMiles = {};
+  var runOnlyMiles = window._runOnlyMiles;
   var mondayStr = (function(){
     var d = new Date(); var day = d.getDay();
     d.setDate(d.getDate() - (day===0?6:day-1)); d.setHours(0,0,0,0);
