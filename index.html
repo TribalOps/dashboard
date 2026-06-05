@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap');
 
@@ -533,102 +532,59 @@ function buildStatCards(weekRows, prevRows, activeAthletes, totalRoster) {
 }
 
 function buildMilesChart(weekRows, allWeekly) {
-  var canvas = document.getElementById('milesChart');
-  if (!canvas) return;
+  var el = document.getElementById('milesChart');
+  if (!el) return;
 
-  var weeks = [...new Set(allWeekly.map(function(r){ return r.Week; }))].sort().reverse().slice(0, 6).reverse();
+  var weeks = [];
+  var seen = {};
+  allWeekly.forEach(function(r){ if (!seen[r.Week]) { seen[r.Week]=1; weeks.push(r.Week); } });
+  weeks.sort().reverse();
+  var last6 = weeks.slice(0,6);
 
-  var athletes = weekRows.map(function(r){ return r.Athlete; });
-  // Run miles only — sum DistanceMiles from Activities where Type === 'Run'
-  var runActs = (window._activities||[]).filter(function(a){ return a.Type === 'Run'; });
-  var currentMiles = {};
+  var athletes = weekRows.slice(0,15).map(function(r){ return r.Athlete; });
+  if (!athletes.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;font-family:IBM Plex Mono,monospace;font-size:10px;color:#b0afa8">No data yet</div>';
+    return;
+  }
+
+  var curMiles = {};
+  weekRows.forEach(function(r){ curMiles[r.Athlete] = parseFloat(r.Miles||0); });
+
+  var avgMiles = {};
   athletes.forEach(function(name) {
-    // Current week run miles
-    var mondayStr = (function(){
-      var d = new Date(); var day = d.getDay();
-      d.setDate(d.getDate() - (day===0?6:day-1)); d.setHours(0,0,0,0);
-      return d.toISOString().slice(0,10);
-    })();
-    var sundayStr = (function(){
-      var d = new Date(); var day = d.getDay();
-      d.setDate(d.getDate() - (day===0?6:day-1) + 6); d.setHours(23,59,59,0);
-      return d.toISOString().slice(0,10);
-    })();
-    // Total miles (all sports) for chart
-    var row = weekRows.find(function(r){ return r.Athlete === name; });
-    currentMiles[name] = row ? parseFloat(parseFloat(row.Miles||0).toFixed(1)) : 0;
-  });
-
-  // 6-week rolling avg total miles from WeeklySummary
-  var rollingAvg = {};
-  athletes.forEach(function(name) {
-    var vals = weeks.slice(0,6).map(function(w) {
-      var row = weekly.find(function(r){ return r.Athlete === name && r.Week === w; });
+    var vals = last6.map(function(w){
+      var row = allWeekly.find(function(r){ return r.Athlete===name && r.Week===w; });
       return row ? parseFloat(row.Miles||0) : 0;
     });
-    rollingAvg[name] = vals.length > 0 ? parseFloat((vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1)) : 0;
+    avgMiles[name] = vals.length ? parseFloat((vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1)) : 0;
   });
 
-  // Sort by current miles desc, take top 20
-  athletes.sort(function(a,b){ return (currentMiles[b]||0) - (currentMiles[a]||0); });
-  var displayAthletes = athletes.slice(0, 20);
-  var labels = displayAthletes.map(function(n){ return n.split(' ')[0]; });
-  var currentData = displayAthletes.map(function(n){ return currentMiles[n] || 0; });
-  var avgData = displayAthletes.map(function(n){ return rollingAvg[n] || 0; });
+  var maxVal = Math.max(1, Math.max.apply(null,
+    athletes.map(function(n){ return Math.max(curMiles[n]||0, avgMiles[n]||0); })
+  ));
 
-  if (window._milesChart) window._milesChart.destroy();
+  var barH = 10, gap = 3, rowH = barH*2 + gap + 16, labelW = 90, chartW = 460;
+  var totalH = athletes.length * rowH + 28;
 
-  window._milesChart = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'This Week (all)',
-          data: currentData,
-          backgroundColor: '#D4521A',
-          borderRadius: 2,
-          barPercentage: 1.0,
-          categoryPercentage: 0.65,
-        },
-        {
-          label: '6-Wk Avg (all)',
-          data: avgData,
-          backgroundColor: '#e0dfd8',
-          borderRadius: 2,
-          barPercentage: 1.0,
-          categoryPercentage: 0.65,
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: '#999', font: { size: 10, family: 'IBM Plex Mono' }, boxWidth: 8 }
-        },
-        tooltip: {
-          backgroundColor: '#fff',
-          borderColor: '#e0dfd8',
-          borderWidth: 1,
-          titleColor: '#2c2c28',
-          bodyColor: '#7a7a72',
-        }
-      },
-      scales: {
-        x: {
-          ticks: { color: '#999', font: { size: 10, family: 'IBM Plex Mono' } },
-          grid: { color: '#eeeee8' }
-        },
-        y: {
-          ticks: { color: '#999', font: { size: 10, family: 'IBM Plex Mono' } },
-          grid: { color: '#eeeee8' },
-          beginAtZero: true
-        }
-      }
-    }
-  });
+  var rows = athletes.map(function(name, i) {
+    var cur = parseFloat((curMiles[name]||0).toFixed(1));
+    var avg = parseFloat((avgMiles[name]||0).toFixed(1));
+    var curW = Math.min(chartW, Math.round((cur/maxVal)*chartW));
+    var avgW = Math.min(chartW, Math.round((avg/maxVal)*chartW));
+    var y = i * rowH + 24;
+    var fn = name.split(' ')[0];
+    return '<text x="'+(labelW-4)+'" y="'+(y+barH-1)+'" text-anchor="end" font-size="9" fill="#7a7a72">'+fn+'</text>'
+      + '<rect x="'+labelW+'" y="'+y+'" width="'+curW+'" height="'+barH+'" fill="#D4521A"/>'
+      + '<rect x="'+labelW+'" y="'+(y+barH+gap)+'" width="'+avgW+'" height="'+barH+'" fill="#e0dfd8"/>'
+      + (cur > 0 ? '<text x="'+(labelW+curW+3)+'" y="'+(y+barH-1)+'" font-size="8" fill="#D4521A">'+cur+'</text>' : '')
+      + (avg > 0 ? '<text x="'+(labelW+avgW+3)+'" y="'+(y+barH*2+gap-1)+'" font-size="8" fill="#b0afa8">'+avg+'</text>' : '');
+  }).join('');
+
+  var w = labelW + chartW + 50;
+  el.innerHTML = '<svg width="100%" viewBox="0 0 '+w+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace">'
+    + '<text x="'+labelW+'" y="12" font-size="8" fill="#D4521A">■ This week</text>'
+    + '<text x="'+(labelW+72)+'" y="12" font-size="8" fill="#b0afa8">■ 6-wk avg</text>'
+    + rows + '</svg>';
 }
 
 // ── TERRITORY ASSIGNMENT ────────────────────────────────────
@@ -1133,7 +1089,7 @@ async function render() {
     + '</div>'
     + '<div class="chart-panel">'
     + '<div class="sec" style="margin:0 0 12px">Total Miles — This Week vs 6-Week Avg</div>'
-    + '<div class="chart-wrap"><canvas id="milesChart"></canvas></div>'
+    + '<div class="chart-wrap" id="milesChart" style="overflow:hidden"></div>'
     + '</div>'
     + '<div class="btm">'
     + '<div class="panel" id="race-panel">'
