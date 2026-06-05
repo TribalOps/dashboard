@@ -336,7 +336,7 @@ function milestoneBadge(note) {
   var n = (note||'').toLowerCase();
   if (n.includes('pr') || n.includes('personal record') || n.includes('pb')) return '<span class="milestone ms-pr">PR 🔥</span>';
   if (n.includes('first') || n.includes('debut') || n.includes('1st')) return '<span class="milestone ms-first">First ✓</span>';
-  if (n.includes('podium') || n.includes('1st place') || n.includes('2nd place') || n.includes('3rd place') || n.includes('win') || n.includes('won')) return '<span class="milestone ms-podium">Podium 🏆</span>';
+  if (n.includes('podium') || n.includes('1st place') || n.includes('2nd place') || n.includes('3rd place') || n.includes('win') || n.includes('won')) return '<span class="milestone ms-podium">Podium</span>';
   if (n.includes('finish') || n.includes('dnf') === false && note) return '<span class="milestone ms-fin">Finished</span>';
   return note ? '<span style="font-size:11px;color:var(--text-dim)">'+note+'</span>' : '';
 }
