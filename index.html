@@ -871,7 +871,7 @@ async function render() {
       var slice = rows.slice(p * pageSize, (p+1) * pageSize);
       var rowsHtml = slice.map(function(r, idx) {
         var i = p * pageSize + idx;
-        var pct = Math.round((parseFloat(r.Miles||0) / maxMi) * 100);
+        var pct = Math.round(((runOnlyMiles[r.Athlete]||0) / maxMi) * 100);
         var topClass = i < 3 ? ' t' : '';
         var fire = buildFireStreak(r.ActiveDays, r.Athlete, window._activities||[]);
         var rank = calcRank(r.Athlete, window._allWeekly||[], window._allWeeks||[], window._challenges||[]);
@@ -909,7 +909,7 @@ async function render() {
           + '</div>'
           + '<div class="bar-wrap"><div class="bar-fill" style="width:'+pct+'%"></div></div></div>'
           + '<div></div>'
-          + '<div class="lv">'+parseFloat(r.Miles||0).toFixed(1)+'</div>'
+          + '<div class="lv">'+(runOnlyMiles[r.Athlete]||0).toFixed(1)+'</div>'
           + '<div class="lv">'+parseFloat(r.Hours||0).toFixed(1)+'</div>'
           + '<div class="lv">'+( r.Sessions||0)+'</div>'
           + fire
@@ -930,7 +930,9 @@ async function render() {
 
   // Week leaderboard data
   var weekRows = getLeaderboardRows('week');
-  var maxMiles = weekRows.length ? parseFloat(weekRows[0].Miles||1) : 1;
+  var maxMiles = weekRows.length
+    ? Math.max(1, Math.max.apply(null, weekRows.map(function(r){ return runOnlyMiles[r.Athlete]||0; })))
+    : 1;
 
   // Previous week rows for trend arrows
   var prevWeekLabel = weeks[1] || '';
@@ -989,7 +991,7 @@ async function render() {
   upcomingRaces.slice(0,4).forEach(function(race) {
     var badge = distBadge(race.Distance);
     var chipClass = 'chip ' + badge[0] + '-chip';
-    var signedUp = (race.Signups||'').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var signedUp = (race.Signups||race.signups||race['Signups']||'').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     var chips = signedUp.map(function(n){ return '<div class="'+chipClass+'">'+n+'</div>'; }).join('');
     rosterHtml += '<div class="roster">'
       + '<div class="sec" style="margin:0 0 6px">Signed up — '+race.Name+'</div>'
@@ -1103,6 +1105,24 @@ async function render() {
   window._challenges = challenges;
   window._allWeekly = weekly;
   window._athletesRoster = athletes_roster;
+
+  // Pre-calculate run-only miles for current week per athlete
+  var runOnlyMiles = {};
+  var mondayStr = (function(){
+    var d = new Date(); var day = d.getDay();
+    d.setDate(d.getDate() - (day===0?6:day-1)); d.setHours(0,0,0,0);
+    return d.toISOString().slice(0,10);
+  })();
+  var sundayStr = (function(){
+    var d = new Date(); var day = d.getDay();
+    d.setDate(d.getDate() - (day===0?6:day-1) + 6);
+    return d.toISOString().slice(0,10);
+  })();
+  activities_raw.filter(function(a){
+    return a.Type === 'Run' && a.Date >= mondayStr && a.Date <= sundayStr;
+  }).forEach(function(a){
+    runOnlyMiles[a.Athlete] = (runOnlyMiles[a.Athlete]||0) + parseFloat(a.DistanceMiles||0);
+  });
 
     var html = ''
     + '<div class="sec" id="stat-label">Team this week</div>'
