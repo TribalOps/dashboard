@@ -1474,18 +1474,16 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
   var baseline = window._baselineData   || [];
   var wkMiles  = window._weeklyMilesData|| [];
 
-  // Build baseline lookup
+  // Baseline lookup
   var baselines = {};
   baseline.forEach(function(r) {
     var name = (r['Name']||'').trim();
     Object.keys(r).forEach(function(k) {
-      if (k.indexOf('average weekly run miles') > -1) {
-        baselines[name] = parseFloat(r[k])||0;
-      }
+      if (k.indexOf('average weekly run miles') > -1) baselines[name] = parseFloat(r[k])||0;
     });
   });
 
-  // Build weekly miles lookup
+  // Weekly miles lookup
   var weeklyMap = {};
   wkMiles.forEach(function(r) {
     var name = (r['Name']||'').trim();
@@ -1497,19 +1495,7 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
     }
   });
 
-  // Get all athletes sorted alphabetically
-  var allNames = [];
-  var seenNames = {};
-  roster.forEach(function(a) { if (a.Name && a.Name !== 'Name') { allNames.push(a.Name); seenNames[a.Name]=1; } });
-  Object.keys(baselines).forEach(function(n) { if (!seenNames[n]) { allNames.push(n); seenNames[n]=1; } });
-  allNames.sort();
-
-  if (!allNames.length) {
-    el.innerHTML = '<div class="feed-empty">No athletes yet</div>';
-    return;
-  }
-
-  // Build territory map from baseline form
+  // Territory map
   var territoryMap = {};
   baseline.forEach(function(r) {
     var name = (r['Name']||'').trim();
@@ -1523,86 +1509,90 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
     }
   });
 
-  var barW = 14, barGap = 3, groupGap = 14, labelH = 32, chartH = 140;
-  var athleteW = barW * 5 + barGap * 4;
-  var totalW = allNames.length * (athleteW + groupGap) + 20;
+  // All athletes sorted alphabetically
+  var allNames = [];
+  var seen = {};
+  roster.forEach(function(a) { if (a.Name && a.Name !== 'Name') { allNames.push(a.Name); seen[a.Name]=1; } });
+  Object.keys(baselines).forEach(function(n) { if (!seen[n]) { allNames.push(n); seen[n]=1; } });
+  allNames.sort();
 
-  // Max value across all athletes
-  var maxVal = 1;
-  allNames.forEach(function(name) {
-    maxVal = Math.max(maxVal, baselines[name]||0);
-    CHALLENGE_WEEKS.forEach(function(w) {
-      maxVal = Math.max(maxVal, (weeklyMap[name]&&weeklyMap[name][w.key])||0);
-    });
-  });
+  if (!allNames.length) {
+    el.innerHTML = '<div class="feed-empty">No athletes yet</div>';
+    return;
+  }
 
-  var bars = allNames.map(function(name, ai) {
-    var x = ai * (athleteW + groupGap) + 10;
+  // Build one card per athlete
+  var cards = allNames.map(function(name) {
     var territory = territoryMap[name] || 'north';
     var cfg = TERRITORY_CONFIG[territory] || TERRITORY_CONFIG['north'];
     var color = cfg.color;
     var baseline = baselines[name] || 0;
-    var barsHtml = '';
 
-    // Bar 1: baseline
-    if (baseline > 0) {
-      var bh = Math.max(2, Math.round((baseline/maxVal)*(chartH-labelH)));
-      var by = chartH - labelH - bh;
-      barsHtml += '<rect x="'+x+'" y="'+by+'" width="'+barW+'" height="'+bh+'" fill="#e0dfd8" rx="1">'
-        + '<title>'+name+' — Baseline: '+baseline.toFixed(1)+' mi</title></rect>';
-      barsHtml += '<text x="'+(x+barW/2)+'" y="'+(by-3)+'" text-anchor="middle" font-size="7" fill="#b0afa8">'+baseline.toFixed(0)+'</text>';
-    }
-
-    // Bars 2-5: weekly
-    CHALLENGE_WEEKS.forEach(function(w, wi) {
-      var miles = (weeklyMap[name]&&weeklyMap[name][w.key])||0;
-      var bx = x + (wi+1)*(barW+barGap);
-      if (miles > 0) {
-        var wh = Math.max(2, Math.round((miles/maxVal)*(chartH-labelH)));
-        var wy = chartH - labelH - wh;
-        barsHtml += '<rect x="'+bx+'" y="'+wy+'" width="'+barW+'" height="'+wh+'" fill="'+color+'" rx="1" opacity="'+(0.5+wi*0.17)+'">'
-          + '<title>'+name+' — '+w.label+': '+miles.toFixed(1)+' mi</title></rect>';
-        barsHtml += '<text x="'+(bx+barW/2)+'" y="'+(wy-3)+'" text-anchor="middle" font-size="7" fill="'+color+'">'+miles.toFixed(0)+'</text>';
-      } else {
-        barsHtml += '<rect x="'+bx+'" y="'+(chartH-labelH-4)+'" width="'+barW+'" height="4" fill="'+color+'" opacity="0.12" rx="1">'
-          + '<title>'+name+' — '+w.label+': no submission</title></rect>';
-      }
+    // Max value for this athlete
+    var maxVal = Math.max(1, baseline);
+    CHALLENGE_WEEKS.forEach(function(w) {
+      maxVal = Math.max(maxVal, (weeklyMap[name]&&weeklyMap[name][w.key])||0);
     });
 
-    // Name label + territory dot
-    var fn = name.split(' ')[0];
-    var ln = name.split(' ')[1] ? name.split(' ')[1][0]+'.' : '';
-    barsHtml += '<circle cx="'+(x+athleteW/2-8)+'" cy="'+(chartH-2)+'" r="3" fill="'+color+'"/>';
-    barsHtml += '<text x="'+(x+athleteW/2+2)+'" y="'+chartH+'" text-anchor="middle" font-size="8" fill="var(--ink)">'+fn+'</text>';
-    barsHtml += '<text x="'+(x+athleteW/2)+'" y="'+(chartH+10)+'" text-anchor="middle" font-size="7" fill="#b0afa8">'+ln+'</text>';
+    var barW = 40, barGap = 8, chartH = 100, labelH = 20;
+    var totalW = 5 * barW + 4 * barGap;
 
-    return barsHtml;
+    // Build 5 bars
+    var barsHtml = '';
+    var barLabels = ['Baseline', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'];
+    var barColors = ['#e0dfd8', color, color, color, color];
+    var barOpacity = [1, 0.6, 0.72, 0.84, 1.0];
+    var barValues = [baseline];
+    CHALLENGE_WEEKS.forEach(function(w) {
+      barValues.push((weeklyMap[name]&&weeklyMap[name][w.key])||0);
+    });
+
+    barValues.forEach(function(val, bi) {
+      var x = bi * (barW + barGap);
+      var bh = val > 0 ? Math.max(3, Math.round((val/maxVal)*(chartH-labelH))) : 3;
+      var by = chartH - labelH - bh;
+      var opacity = bi === 0 ? 1 : barOpacity[bi];
+      var fill = bi === 0 ? '#e0dfd8' : color;
+      var textColor = bi === 0 ? '#b0afa8' : color;
+
+      barsHtml += '<rect x="'+x+'" y="'+by+'" width="'+barW+'" height="'+bh+'" fill="'+fill+'" rx="2" opacity="'+opacity+(val===0?'" style="stroke:'+fill+';stroke-dasharray:2"':'"')+'>'
+        + '<title>'+barLabels[bi]+': '+(val > 0 ? val.toFixed(1)+' mi' : 'no submission')+'</title></rect>';
+
+      if (val > 0) {
+        barsHtml += '<text x="'+(x+barW/2)+'" y="'+(by-4)+'" text-anchor="middle" font-size="9" fill="'+textColor+'">'+val.toFixed(1)+'</text>';
+      }
+      barsHtml += '<text x="'+(x+barW/2)+'" y="'+(chartH-2)+'" text-anchor="middle" font-size="8" fill="#b0afa8">'+barLabels[bi]+'</text>';
+    });
+
+    // Y gridlines
+    var gridHtml = '';
+    [0, 0.5, 1].forEach(function(pct) {
+      var y = chartH - labelH - Math.round(pct*(chartH-labelH));
+      var val = Math.round(maxVal*pct);
+      gridHtml += '<line x1="-24" y1="'+y+'" x2="'+totalW+'" y2="'+y+'" stroke="#f0efe8" stroke-width="1"/>';
+      gridHtml += '<text x="-4" y="'+(y+3)+'" text-anchor="end" font-size="7" fill="#c8c8c0">'+val+'</text>';
+    });
+
+    return '<div style="display:grid;grid-template-columns:160px 1fr;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--rule-light)">'
+      + '<div>'
+      + '<div style="font-family:Playfair Display,serif;font-size:14px;font-weight:700;color:var(--black)">'+name+'</div>'
+      + '<div style="display:flex;align-items:center;gap:5px;margin-top:3px">'
+      + '<span style="width:7px;height:7px;border-radius:50%;background:'+color+';display:inline-block"></span>'
+      + '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:'+color+';letter-spacing:1px;text-transform:uppercase">'+cfg.label+'</span>'
+      + '</div>'
+      + '</div>'
+      + '<div style="overflow:visible">'
+      + '<svg width="100%" viewBox="-28 0 '+(totalW+32)+' '+chartH+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace" style="overflow:visible">'
+      + gridHtml + barsHtml
+      + '</svg>'
+      + '</div>'
+      + '</div>';
   }).join('');
 
-  // Y axis
-  var yLabels = '';
-  [0,0.25,0.5,0.75,1].forEach(function(pct) {
-    var val = Math.round(maxVal*pct);
-    var y = chartH - labelH - Math.round(pct*(chartH-labelH));
-    yLabels += '<line x1="0" y1="'+y+'" x2="'+totalW+'" y2="'+y+'" stroke="#f0efe8" stroke-width="1"/>';
-    yLabels += '<text x="4" y="'+(y-2)+'" font-size="7" fill="#b0afa8">'+val+'</text>';
-  });
-
-  // Legend
-  var legend = '<text x="10" y="'+(chartH+26)+'" font-size="8" fill="#b0afa8">■ Baseline</text>'
-    + '<text x="68" y="'+(chartH+26)+'" font-size="8" fill="#7a7a72">■ Wk 1–4</text>'
-    + '<text x="120" y="'+(chartH+26)+'" font-size="8" fill="#2a5f9e">● North</text>'
-    + '<text x="158" y="'+(chartH+26)+'" font-size="8" fill="#c0392b">● South</text>'
-    + '<text x="196" y="'+(chartH+26)+'" font-size="8" fill="#c8900a">● West</text>';
-
-  var svgH = chartH + 32;
   el.innerHTML = '<div class="panel">'
-    + '<div class="sec" style="margin:0 0 12px">All Athletes — Alphabetical</div>'
-    + '<div style="overflow-x:auto">'
-    + '<svg width="100%" viewBox="0 0 '+totalW+' '+svgH+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace" style="min-width:'+(Math.max(600,totalW))+'px">'
-    + yLabels + bars + legend
-    + '</svg>'
-    + '</div></div>';
+    + '<div class="sec" style="margin:0 0 0">All Athletes — Alphabetical</div>'
+    + cards
+    + '</div>';
 }
 
 
