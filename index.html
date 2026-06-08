@@ -1509,12 +1509,8 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
     }
   });
 
-  // All athletes sorted alphabetically
-  var allNames = [];
-  var seen = {};
-  roster.forEach(function(a) { if (a.Name && a.Name !== 'Name') { allNames.push(a.Name); seen[a.Name]=1; } });
-  Object.keys(baselines).forEach(function(n) { if (!seen[n]) { allNames.push(n); seen[n]=1; } });
-  allNames.sort();
+  // All athletes from Baseline sheet only, sorted alphabetically
+  var allNames = Object.keys(baselines).filter(Boolean).sort();
 
   if (!allNames.length) {
     el.innerHTML = '<div class="feed-empty">No athletes yet</div>';
