@@ -231,7 +231,6 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
     <button class="tab-btn" id="tab-btn-feed" onclick="switchTab('feed')">Activity Feed</button>
     <button class="tab-btn" id="tab-btn-athletes" onclick="switchTab('athletes')">Athletes</button>
     <button class="tab-btn" id="tab-btn-challenge" onclick="switchTab('challenge')">Tribal Territories</button>
-    <button class="tab-btn" id="tab-btn-territories" onclick="switchTab('territories')">Leaderboard</button>
   </nav>
   <div id="tab-dashboard" class="tab-pane active">
     <div id="main-content">
@@ -250,9 +249,6 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
     <div id="athletes-content"><div class="feed-empty">Loading athletes...</div></div>
   </div>
 
-  <div id="tab-territories" class="tab-pane">
-    <div id="territory-leaderboard"><div class="feed-empty">Loading territory data...</div></div>
-  </div>
 
   <div id="tab-challenge" class="tab-pane">
     <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start">
@@ -280,7 +276,13 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
     </div>
   </div>
 
-  <div class="footer"><div><a href="https://forms.gle/8kiAD1D5F2SegqBK7" target="_blank" style="color:var(--orange);text-decoration:none;letter-spacing:2px">Submit Weekly Miles →</a></div><div style="margin-top:5px">Fueled by Maple Boost</div></div>
+  <div class="footer">
+  <div style="display:flex;justify-content:center;gap:24px;margin-bottom:10px">
+    <a href="https://forms.gle/8kiAD1D5F2SegqBK7" target="_blank" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text);text-decoration:none;border-bottom:1px solid var(--orange);padding-bottom:2px">Submit Weekly Miles</a>
+    <a href="https://forms.gle/TjNaLJEw5L8TvDYX7" target="_blank" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text);text-decoration:none;border-bottom:1px solid var(--rule);padding-bottom:2px">Submit Baseline</a>
+  </div>
+  <div>Fueled by Maple Boost</div>
+</div>
 </div>
 
 <script>
@@ -767,23 +769,28 @@ async function render() {
   var weekStart = getMonday(new Date());
   document.getElementById('lb-toggle') && (document.getElementById('lb-toggle').style.visibility = 'visible');
 
-  var [weekly, races, challenges, athletes_roster, results, activities_raw, baselineData, weeklyMilesData] = await Promise.all([
-    fetchCSV(URLS.weekly).catch(function(e){ console.warn('weekly failed',e); return []; }),
-    fetchCSV(URLS.races).catch(function(e){ console.warn('races failed',e); return []; }),
-    fetchCSV(URLS.challenges).catch(function(e){ console.warn('challenges failed',e); return []; }),
-    fetchCSV(URLS.athletes).catch(function(e){ console.warn('athletes failed',e); return []; }),
+  // Core data — races, athletes, baseline, weekly miles
+  var [races, challenges, athletes_roster, results, baselineData, weeklyMilesData] = await Promise.all([
+    fetchCSV(URLS.races).catch(function(e){ return []; }),
+    fetchCSV(URLS.challenges).catch(function(e){ return []; }),
+    fetchCSV(URLS.athletes).catch(function(e){ return []; }),
     URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results).catch(function(e){ return []; }) : Promise.resolve([]),
-    URLS.activities !== 'ACTIVITIES_CSV_URL_HERE' ? fetchCSV(URLS.activities).catch(function(e){ return []; }) : Promise.resolve([]),
     fetchCSV(URLS.baseline).catch(function(e){ console.warn('baseline failed',e); return []; }),
     fetchCSV(URLS.weeklyMiles).catch(function(e){ console.warn('weeklyMiles failed',e); return []; }),
   ]);
-  console.log('Data loaded — weekly:', weekly.length, 'baseline:', baselineData.length, 'weeklyMiles:', weeklyMilesData.length);
+
+  // Strava data — optional, load separately so failures don't block render
+  var weekly = [], activities_raw = [];
+  try { weekly = await fetchCSV(URLS.weekly); } catch(e) { console.warn('weekly skipped'); }
+  try { activities_raw = await fetchCSV(URLS.activities); } catch(e) { console.warn('activities skipped'); }
+
+  console.log('Data loaded — races:', races.length, 'athletes:', athletes_roster.length, 'baseline:', baselineData.length, 'weeklyMiles:', weeklyMilesData.length);
 
   // Store globally for toggle
   window._allWeekly = weekly;
 
-  // All weeks available, sorted newest first
-  var weeks = [...new Set(weekly.map(function(r){ return r.Week; }))].sort().reverse();
+  // All weeks available, sorted newest first (may be empty if Strava not connected)
+  var weeks = weekly.length ? [...new Set(weekly.map(function(r){ return r.Week; }))].sort().reverse() : [];
 
   // Helper: get Monday of a given date
   function getMondayOf(d) {
@@ -914,13 +921,15 @@ async function render() {
 
   // Team streak — consecutive weeks with 100% participation
   var teamStreak = 0;
-  for (var wi = 0; wi < weeks.length; wi++) {
-    var wk = weeks[wi];
-    var wkAthletes = weekly.filter(function(r){ return r.Week === wk && parseInt(r.Sessions||0) > 0; }).length;
-    if (wkAthletes >= allRoster && allRoster > 0) {
-      teamStreak++;
-    } else {
-      break;
+  if (weeks.length && weekly.length) {
+    for (var wi = 0; wi < weeks.length; wi++) {
+      var wk = weeks[wi];
+      var wkAthletes = weekly.filter(function(r){ return r.Week === wk && parseInt(r.Sessions||0) > 0; }).length;
+      if (wkAthletes >= allRoster && allRoster > 0) {
+        teamStreak++;
+      } else {
+        break;
+      }
     }
   }
   var streakEl = document.getElementById('team-streak-val');
@@ -1573,11 +1582,7 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
   var html = '';
 
   // Form links at top
-  html += '<div class="form-links">'
-    + '<span style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-right:8px">Submit:</span>'
-    + '<a href="'+FORM_BASELINE+'" target="_blank" class="form-btn">Baseline →</a>'
-    + '<a href="'+FORM_WEEKLY+'" target="_blank" class="form-btn">Weekly Miles →</a>'
-    + '</div>';
+  // Form links moved to footer
 
   territories.forEach(function(t) {
     var athletes = groups[t.key] || [];
@@ -1650,7 +1655,7 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
     });
 
     html += '<div class="territory-section">'
-      + '<div class="territory-header" style="border-color:'+t.color+'">'
+      + '<div class="territory-header">'
       + '<span class="territory-title" style="color:'+t.color+'">'+t.label+'</span>'
       + '<span class="territory-count">'+athletes.length+' athletes</span>'
       + '</div>'
