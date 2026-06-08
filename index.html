@@ -1574,19 +1574,15 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
       gridHtml += '<text x="-4" y="'+(y+3)+'" text-anchor="end" font-size="7" fill="#c8c8c0">'+val+'</text>';
     });
 
-    return '<div style="display:grid;grid-template-columns:160px 1fr;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--rule-light)">'
-      + '<div>'
-      + '<div style="font-family:Playfair Display,serif;font-size:14px;font-weight:700;color:var(--black)">'+name+'</div>'
-      + '<div style="display:flex;align-items:center;gap:5px;margin-top:3px">'
-      + '<span style="width:7px;height:7px;border-radius:50%;background:'+color+';display:inline-block"></span>'
+    return '<div style="padding:14px 0;border-bottom:1px solid var(--rule-light)">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      + '<span style="font-family:Playfair Display,serif;font-size:14px;font-weight:700;color:var(--black)">'+name+'</span>'
+      + '<span style="width:7px;height:7px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0"></span>'
       + '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:'+color+';letter-spacing:1px;text-transform:uppercase">'+cfg.label+'</span>'
       + '</div>'
-      + '</div>'
-      + '<div style="overflow:visible">'
-      + '<svg width="100%" viewBox="-28 0 '+(totalW+32)+' '+chartH+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace" style="overflow:visible">'
+      + '<svg width="100%" viewBox="-28 0 '+(totalW+32)+' '+chartH+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace" style="overflow:visible;display:block">'
       + gridHtml + barsHtml
       + '</svg>'
-      + '</div>'
       + '</div>';
   }).join('');
 
