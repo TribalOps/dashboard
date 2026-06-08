@@ -485,13 +485,7 @@ function buildCountdownCards(challenges, athletes_roster) {
           + '<div class="sv hot">' + (challengeDays === 0 ? '✓' : challengeDays) + '</div>'
           + '<div class="sl">' + challengeLabel + '</div>'
           + '<div class="sc-sub">' + challengeSub + '</div>'
-          + '</div>')
-    + '<div class="sc">'
-    + '<div class="sv">' + (challengeSignups || '—') + '</div>'
-    + '<div class="sl">Athletes in Challenge</div>'
-    + '<div class="sc-sub"></div>'
-    + '</div>'
-    ;
+          + '</div>');
 }
 
 function buildStatCards(weekRows, prevRows, activeAthletes, totalRoster) {
