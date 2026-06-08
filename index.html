@@ -1474,12 +1474,17 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
   var baseline = window._baselineData   || [];
   var wkMiles  = window._weeklyMilesData|| [];
 
-  // Baseline lookup
+  // Baseline lookup — skip rows where name looks like a header or is empty
   var baselines = {};
   baseline.forEach(function(r) {
     var name = (r['Name']||'').trim();
+    // Skip if name is empty, is 'Name', or is longer than 40 chars (header text)
+    if (!name || name === 'Name' || name.length > 40) return;
     Object.keys(r).forEach(function(k) {
-      if (k.indexOf('average weekly run miles') > -1) baselines[name] = parseFloat(r[k])||0;
+      if (k.indexOf('average weekly run miles') > -1) {
+        var val = parseFloat(r[k]);
+        if (!isNaN(val) && val > 0) baselines[name] = val;
+      }
     });
   });
 
@@ -1600,11 +1605,13 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
   var baselines = {};
   baselineData.forEach(function(r) {
     var name = (r['Name']||'').trim();
-    var milesVal = 0;
+    if (!name || name === 'Name' || name.length > 40) return;
     Object.keys(r).forEach(function(k) {
-      if (k.indexOf('average weekly run miles') > -1) milesVal = parseFloat(r[k])||0;
+      if (k.indexOf('average weekly run miles') > -1) {
+        var val = parseFloat(r[k]);
+        if (!isNaN(val) && val > 0) baselines[name] = val;
+      }
     });
-    if (name) baselines[name] = milesVal;
   });
 
   var weeklyMap = {};
