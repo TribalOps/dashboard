@@ -43,7 +43,7 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
 .sec{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
 
 /* STAT CARDS */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:24px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:24px}
 .sc{background:var(--surface);padding:14px 16px}
 .sv{font-family:Playfair Display,serif;font-size:32px;font-weight:700;line-height:1;color:var(--black)}
 .sv.hot{color:var(--orange)}
@@ -1121,7 +1121,7 @@ async function render() {
     + '<div class="stats" id="stat-cards">'
     + buildCountdownCards(challenges, athletes_roster)
     + '</div>'
-    + '<div class="sec" id="lb-label">Weekly leaderboard</div>'
+    + '<div id="territory-leaderboard" style="margin-bottom:20px"></div>'
 
 
 
@@ -1539,7 +1539,14 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
   var baselines = {};
   baselineData.forEach(function(r) {
     var name = (r['Name']||'').trim();
-    var miles = parseFloat(r['What were your average weekly run miles for'] || r['Baseline Miles'] || 0);
+    // Match the full Google Form column header
+    var milesVal = 0;
+    Object.keys(r).forEach(function(k) {
+      if (k.indexOf('average weekly run miles') > -1 || k.indexOf('Baseline Miles') > -1) {
+        milesVal = parseFloat(r[k]) || 0;
+      }
+    });
+    var miles = milesVal;
     if (name) baselines[name] = miles;
   });
 
@@ -1555,12 +1562,29 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
     }
   });
 
-  // Group athletes by territory
+  // Build territory map from baseline submissions first (most accurate)
+  var baselineTerritory = {};
+  baselineData.forEach(function(r) {
+    var name = (r['Name']||'').trim();
+    var territory = (r['What Territory are you in?']||'').trim().toLowerCase();
+    if (name && territory) baselineTerritory[name] = territory;
+  });
+
+  // Group athletes by territory — baseline form takes priority, fall back to state
   var groups = { west: [], south: [], north: [] };
+  // First add athletes who submitted baseline
+  Object.keys(baselineTerritory).forEach(function(name) {
+    var t = baselineTerritory[name];
+    if (groups[t]) groups[t].push(name);
+  });
+  // Then add roster athletes not yet in baseline, using state
   athletesRoster.forEach(function(a) {
     if (!a.Name || a.Name === 'Name') return;
-    var t = getTerritory(a.State);
-    if (t) groups[t].push(a.Name);
+    var alreadyAdded = Object.values(groups).some(function(g){ return g.indexOf(a.Name) > -1; });
+    if (!alreadyAdded) {
+      var t = getTerritory(a.State);
+      if (t) groups[t].push(a.Name);
+    }
   });
 
   var territories = [
@@ -1651,7 +1675,7 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
       + '<span class="territory-title" style="color:'+t.color+'">'+cfg2.emoji+' '+t.label+'</span>'
       + '<span class="territory-count">'+athletes.length+' athletes</span>'
       + '</div>'
-      + '<div style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.4">'+cfg2.motto+'</div>'
+      + '<div style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.4">'+cfg2.motto+'</div>'
       + '</div>'
       + '<div class="territory-chart">'
       + '<svg width="100%" viewBox="0 0 '+totalW+' '+(chartH+28)+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace">'
