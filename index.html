@@ -231,6 +231,7 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
     <button class="tab-btn" id="tab-btn-feed" onclick="switchTab('feed')">Activity Feed</button>
     <button class="tab-btn" id="tab-btn-athletes" onclick="switchTab('athletes')">Athletes</button>
     <button class="tab-btn" id="tab-btn-challenge" onclick="switchTab('challenge')">Tribal Territories</button>
+    <button class="tab-btn" id="tab-btn-territories" onclick="switchTab('territories')">Leaderboard</button>
   </nav>
   <div id="tab-dashboard" class="tab-pane active">
     <div id="main-content">
@@ -247,6 +248,10 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
 
   <div id="tab-athletes" class="tab-pane">
     <div id="athletes-content"><div class="feed-empty">Loading athletes...</div></div>
+  </div>
+
+  <div id="tab-territories" class="tab-pane">
+    <div id="territory-leaderboard"><div class="feed-empty">Loading territory data...</div></div>
   </div>
 
   <div id="tab-challenge" class="tab-pane">
@@ -275,7 +280,7 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
     </div>
   </div>
 
-  <div class="footer"><div>Auto-updates nightly</div><div style="margin-top:5px">Powered by Strava &nbsp;·&nbsp; Fueled by Maple Boost</div></div>
+  <div class="footer"><div><a href="https://forms.gle/8kiAD1D5F2SegqBK7" target="_blank" style="color:var(--orange);text-decoration:none;letter-spacing:2px">Submit Weekly Miles →</a></div><div style="margin-top:5px">Fueled by Maple Boost</div></div>
 </div>
 
 <script>
@@ -287,6 +292,8 @@ var URLS = {
   athletes:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM8koFSQTNJWrYKk6PDt3JyNX9Dp17YI3j_g-Em6ftvW32ZUaYDGXag_lu4R5BKi58uE4b_ypb2SkJ/pub?gid=86882950&single=true&output=csv',
   results:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM8koFSQTNJWrYKk6PDt3JyNX9Dp17YI3j_g-Em6ftvW32ZUaYDGXag_lu4R5BKi58uE4b_ypb2SkJ/pub?gid=1237794782&single=true&output=csv',
   activities: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM8koFSQTNJWrYKk6PDt3JyNX9Dp17YI3j_g-Em6ftvW32ZUaYDGXag_lu4R5BKi58uE4b_ypb2SkJ/pub?gid=797637189&single=true&output=csv',
+  baseline:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM8koFSQTNJWrYKk6PDt3JyNX9Dp17YI3j_g-Em6ftvW32ZUaYDGXag_lu4R5BKi58uE4b_ypb2SkJ/pub?gid=172703287&single=true&output=csv',
+  weeklyMiles:'https://docs.google.com/spreadsheets/d/e/2PACX-1vSM8koFSQTNJWrYKk6PDt3JyNX9Dp17YI3j_g-Em6ftvW32ZUaYDGXag_lu4R5BKi58uE4b_ypb2SkJ/pub?gid=758464667&single=true&output=csv',
 };
 
 // ── CSV PARSER ───────────────────────────────────────────────
@@ -481,7 +488,7 @@ function buildCountdownCards(challenges, athletes_roster) {
     + '<div class="sc">'
     + '<div class="sv">' + (challengeSignups || '—') + '</div>'
     + '<div class="sl">Athletes in Challenge</div>'
-    + '<div class="sc-sub">Connected via Strava</div>'
+    + '<div class="sc-sub"></div>'
     + '</div>'
     ;
 }
@@ -586,6 +593,17 @@ function buildMilesChart(weekRows, allWeekly) {
     + '<text x="'+(labelW+72)+'" y="12" font-size="8" fill="#b0afa8">■ 6-wk avg</text>'
     + rows + '</svg>';
 }
+
+// ── CHALLENGE FORMS ─────────────────────────────────────────
+var FORM_BASELINE    = 'https://forms.gle/TjNaLJEw5L8TvDYX7';
+var FORM_WEEKLY      = 'https://forms.gle/8kiAD1D5F2SegqBK7';
+
+var CHALLENGE_WEEKS  = [
+  { key: 'Week 1 - June 15',  label: 'Wk 1',  date: 'Jun 15' },
+  { key: 'Week 2 - June 22',  label: 'Wk 2',  date: 'Jun 22' },
+  { key: 'Week 3 - June 29',  label: 'Wk 3',  date: 'Jun 29' },
+  { key: 'Week 4 - July 6',   label: 'Wk 4',  date: 'Jul 6'  },
+];
 
 // ── TERRITORY ASSIGNMENT ────────────────────────────────────
 var WEST_STATES = ['MT','ID','WY','CO','UT','NV','AZ','NM','CA','OR','WA','AK','HI','AU','NSW','VIC','QLD','WA','SA','TAS','NT','ACT'];
@@ -749,15 +767,17 @@ async function render() {
   var weekStart = getMonday(new Date());
   document.getElementById('lb-toggle') && (document.getElementById('lb-toggle').style.visibility = 'visible');
 
-  var [weekly, races, challenges, athletes_roster, results, activities_raw] = await Promise.all([
+  var [weekly, races, challenges, athletes_roster, results, activities_raw, baselineData, weeklyMilesData] = await Promise.all([
     fetchCSV(URLS.weekly).catch(function(e){ console.warn('weekly failed',e); return []; }),
     fetchCSV(URLS.races).catch(function(e){ console.warn('races failed',e); return []; }),
     fetchCSV(URLS.challenges).catch(function(e){ console.warn('challenges failed',e); return []; }),
     fetchCSV(URLS.athletes).catch(function(e){ console.warn('athletes failed',e); return []; }),
-    URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results).catch(function(e){ console.warn('results failed',e); return []; }) : Promise.resolve([]),
-    URLS.activities !== 'ACTIVITIES_CSV_URL_HERE' ? fetchCSV(URLS.activities).catch(function(e){ console.warn('activities failed',e); return []; }) : Promise.resolve([]),
+    URLS.results !== 'RESULTS_CSV_URL_HERE' ? fetchCSV(URLS.results).catch(function(e){ return []; }) : Promise.resolve([]),
+    URLS.activities !== 'ACTIVITIES_CSV_URL_HERE' ? fetchCSV(URLS.activities).catch(function(e){ return []; }) : Promise.resolve([]),
+    fetchCSV(URLS.baseline).catch(function(e){ console.warn('baseline failed',e); return []; }),
+    fetchCSV(URLS.weeklyMiles).catch(function(e){ console.warn('weeklyMiles failed',e); return []; }),
   ]);
-  console.log('Data loaded — weekly:', weekly.length, 'races:', races.length, 'activities:', activities_raw.length);
+  console.log('Data loaded — weekly:', weekly.length, 'baseline:', baselineData.length, 'weeklyMiles:', weeklyMilesData.length);
 
   // Store globally for toggle
   window._allWeekly = weekly;
@@ -942,7 +962,14 @@ async function render() {
   upcomingRaces.slice(0,4).forEach(function(race) {
     var badge = distBadge(race.Distance);
     var chipClass = 'chip ' + badge[0] + '-chip';
-    var signedUp = (race.Signups||race.signups||race['Signups']||'').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var signupVal = race.Signups || race.signups || race['Signups'] || '';
+    // Also check all keys for anything containing 'signup' or 'sign'
+    if (!signupVal) {
+      Object.keys(race).forEach(function(k) {
+        if (k.toLowerCase().indexOf('sign') > -1 && race[k]) signupVal = race[k];
+      });
+    }
+    var signedUp = signupVal.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     var chips = signedUp.map(function(n){ return '<div class="'+chipClass+'">'+n+'</div>'; }).join('');
     rosterHtml += '<div class="roster">'
       + '<div class="sec" style="margin:0 0 6px">Signed up — '+race.Name+'</div>'
@@ -1056,6 +1083,8 @@ async function render() {
   window._challenges = challenges;
   window._allWeekly = weekly;
   window._athletesRoster = athletes_roster;
+  window._baselineData = baselineData;
+  window._weeklyMilesData = weeklyMilesData;
 
   // Pre-calculate run-only miles for current week per athlete
   window._runOnlyMiles = {};
@@ -1110,6 +1139,9 @@ async function render() {
 
   // Build challenge tab
   buildChallengeTab(activities_raw, athletes_roster);
+
+  // Build territory leaderboard
+  buildTerritoryLeaderboard(athletes_roster, baselineData, weeklyMilesData);
 
   // Build chart after DOM is ready
   setTimeout(function() {
@@ -1497,6 +1529,140 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
   }).join('');
 
   el.innerHTML = html;
+}
+
+// ── TERRITORY LEADERBOARD ───────────────────────────────────
+function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData) {
+  var el = document.getElementById('territory-leaderboard');
+  if (!el) return;
+
+  // Build lookup: athlete name -> baseline miles
+  var baselines = {};
+  baselineData.forEach(function(r) {
+    var name = (r['Name']||'').trim();
+    var miles = parseFloat(r['What were your average weekly run miles for'] || r['Baseline Miles'] || 0);
+    if (name) baselines[name] = miles;
+  });
+
+  // Build lookup: athlete name -> { 'Week 1 - June 15': miles, ... }
+  var weeklyMap = {};
+  weeklyMilesData.forEach(function(r) {
+    var name = (r['Name']||'').trim();
+    var week = (r['Challenge Week']||'').trim();
+    var miles = parseFloat(r['How many miles did you run this week?']||0);
+    if (name && week) {
+      if (!weeklyMap[name]) weeklyMap[name] = {};
+      weeklyMap[name][week] = miles;
+    }
+  });
+
+  // Group athletes by territory
+  var groups = { west: [], south: [], north: [] };
+  athletesRoster.forEach(function(a) {
+    if (!a.Name || a.Name === 'Name') return;
+    var t = getTerritory(a.State);
+    if (t) groups[t].push(a.Name);
+  });
+
+  var territories = [
+    { key: 'west',  label: 'Tribal West',  color: '#c8900a', border: '#c8900a' },
+    { key: 'south', label: 'Tribal South', color: '#c0392b', border: '#c0392b' },
+    { key: 'north', label: 'Tribal North', color: '#2a5f9e', border: '#2a5f9e' },
+  ];
+
+  var html = '';
+
+  // Form links at top
+  html += '<div class="form-links">'
+    + '<span style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-right:8px">Submit:</span>'
+    + '<a href="'+FORM_BASELINE+'" target="_blank" class="form-btn">Baseline →</a>'
+    + '<a href="'+FORM_WEEKLY+'" target="_blank" class="form-btn">Weekly Miles →</a>'
+    + '</div>';
+
+  territories.forEach(function(t) {
+    var athletes = groups[t.key] || [];
+    if (!athletes.length) return;
+
+    // Max value for scaling
+    var allVals = athletes.map(function(name) {
+      var weeks = CHALLENGE_WEEKS.map(function(w){ return weeklyMap[name] && weeklyMap[name][w.key] || 0; });
+      return Math.max(baselines[name]||0, Math.max.apply(null, weeks.concat([0])));
+    });
+    var maxVal = Math.max(1, Math.max.apply(null, allVals));
+
+    var barW = 14;
+    var barGap = 3;
+    var groupGap = 16;
+    var athleteW = barW * 5 + barGap * 4;
+    var labelH = 28;
+    var chartH = 160;
+    var totalW = athletes.length * (athleteW + groupGap) + 20;
+
+    var bars = athletes.map(function(name, ai) {
+      var x = ai * (athleteW + groupGap) + 10;
+      var baseline = baselines[name] || 0;
+
+      var barsHtml = '';
+
+      // Bar 1: baseline (gray)
+      var bh = Math.round((baseline / maxVal) * (chartH - labelH));
+      var by = chartH - labelH - bh;
+      barsHtml += '<rect x="'+(x)+'" y="'+by+'" width="'+barW+'" height="'+bh+'" fill="#e0dfd8" rx="1"/>';
+      if (baseline > 0) barsHtml += '<text x="'+(x+barW/2)+'" y="'+(by-3)+'" text-anchor="middle" font-size="7" fill="#b0afa8">'+baseline.toFixed(0)+'</text>';
+
+      // Bars 2-5: weekly submissions
+      CHALLENGE_WEEKS.forEach(function(w, wi) {
+        var miles = (weeklyMap[name] && weeklyMap[name][w.key]) || 0;
+        var bx = x + (wi+1) * (barW + barGap);
+        if (miles > 0) {
+          var wh = Math.round((miles / maxVal) * (chartH - labelH));
+          var wy = chartH - labelH - wh;
+          barsHtml += '<rect x="'+bx+'" y="'+wy+'" width="'+barW+'" height="'+wh+'" fill="'+t.color+'" rx="1" opacity="'+(0.5 + wi*0.17)+'"/>';
+          barsHtml += '<text x="'+(bx+barW/2)+'" y="'+(wy-3)+'" text-anchor="middle" font-size="7" fill="'+t.color+'">'+miles.toFixed(0)+'</text>';
+        } else {
+          // Empty bar outline
+          barsHtml += '<rect x="'+bx+'" y="'+(chartH-labelH-4)+'" width="'+barW+'" height="4" fill="'+t.color+'" opacity="0.15" rx="1"/>';
+        }
+      });
+
+      // Athlete name label
+      var firstName = name.split(' ')[0];
+      var lastName = name.split(' ')[1] ? name.split(' ')[1][0]+'.' : '';
+      barsHtml += '<text x="'+(x + athleteW/2)+'" y="'+(chartH-4)+'" text-anchor="middle" font-size="8" fill="var(--ink)">'+firstName+'</text>';
+      barsHtml += '<text x="'+(x + athleteW/2)+'" y="'+(chartH+6)+'" text-anchor="middle" font-size="7" fill="#b0afa8">'+lastName+'</text>';
+
+      return barsHtml;
+    }).join('');
+
+    // Y axis labels
+    var yLabels = '';
+    [0, 0.25, 0.5, 0.75, 1].forEach(function(pct) {
+      var val = Math.round(maxVal * pct);
+      var y = chartH - labelH - Math.round(pct * (chartH - labelH));
+      yLabels += '<line x1="0" y1="'+y+'" x2="'+totalW+'" y2="'+y+'" stroke="#f0efe8" stroke-width="1"/>';
+      yLabels += '<text x="0" y="'+(y-2)+'" font-size="7" fill="#b0afa8">'+val+'</text>';
+    });
+
+    // Legend
+    var legend = '<text x="10" y="'+(chartH+20)+'" font-size="8" fill="#b0afa8">■ Baseline</text>';
+    CHALLENGE_WEEKS.forEach(function(w, wi) {
+      legend += '<text x="'+(70 + wi*60)+'" y="'+(chartH+20)+'" font-size="8" fill="'+t.color+'" opacity="'+(0.5+wi*0.17)+'">■ '+w.label+'</text>';
+    });
+
+    html += '<div class="territory-section">'
+      + '<div class="territory-header" style="border-color:'+t.color+'">'
+      + '<span class="territory-title" style="color:'+t.color+'">'+t.label+'</span>'
+      + '<span class="territory-count">'+athletes.length+' athletes</span>'
+      + '</div>'
+      + '<div class="territory-chart">'
+      + '<svg width="100%" viewBox="0 0 '+totalW+' '+(chartH+28)+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace">'
+      + yLabels + bars + legend
+      + '</svg>'
+      + '</div>'
+      + '</div>';
+  });
+
+  el.innerHTML = html || '<div class="feed-empty">No athlete data yet</div>';
 }
 
 render().catch(function(e){
