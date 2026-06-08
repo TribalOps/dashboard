@@ -215,13 +215,11 @@ body{background:var(--paper);color:var(--text);font-family:DM Sans,sans-serif;mi
         <div class="logo-sub">Team Training Dashboard</div>
       </div>
     </div>
-
-  </div>
-  <!-- LINK HUB -->
-  <div class="link-hub">
-    <a href="https://trainingpeaks.com" target="_blank" class="hub-link">Training Plan →</a>
-    <a href="https://skool.com" target="_blank" class="hub-link">Resources →</a>
-    <a href="https://usemapleboost.com" target="_blank" class="hub-link">Fuel →</a>
+    <div style="display:flex;gap:20px;align-items:center">
+      <a href="https://trainingpeaks.com" target="_blank" class="hub-link">Training Plan →</a>
+      <a href="https://skool.com" target="_blank" class="hub-link">Resources →</a>
+      <a href="https://usemapleboost.com" target="_blank" class="hub-link">Fuel →</a>
+    </div>
   </div>
   <nav class="tab-nav">
     <button class="tab-btn active" id="tab-btn-dashboard" onclick="switchTab('dashboard')">Dashboard</button>
@@ -1607,6 +1605,138 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
     + '</div></div>';
 }
 
+
+// ── TERRITORY LEADERBOARD ───────────────────────────────────
+function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData) {
+  var el = document.getElementById('territory-leaderboard');
+  if (!el) return;
+
+  var baselines = {};
+  baselineData.forEach(function(r) {
+    var name = (r['Name']||'').trim();
+    var milesVal = 0;
+    Object.keys(r).forEach(function(k) {
+      if (k.indexOf('average weekly run miles') > -1) milesVal = parseFloat(r[k])||0;
+    });
+    if (name) baselines[name] = milesVal;
+  });
+
+  var weeklyMap = {};
+  weeklyMilesData.forEach(function(r) {
+    var name = (r['Name']||'').trim();
+    var week = (r['Challenge Week']||'').trim();
+    var miles = parseFloat(r['How many miles did you run this week?']||0);
+    if (name && week) {
+      if (!weeklyMap[name]) weeklyMap[name] = {};
+      weeklyMap[name][week] = miles;
+    }
+  });
+
+  var baselineTerritory = {};
+  baselineData.forEach(function(r) {
+    var name = (r['Name']||'').trim();
+    var territory = (r['What Territory are you in?']||'').trim().toLowerCase();
+    if (name && territory) baselineTerritory[name] = territory;
+  });
+
+  var groups = { west: [], south: [], north: [] };
+  Object.keys(baselineTerritory).forEach(function(name) {
+    var t = baselineTerritory[name];
+    if (groups[t]) groups[t].push(name);
+  });
+  athletesRoster.forEach(function(a) {
+    if (!a.Name || a.Name === 'Name') return;
+    var already = Object.values(groups).some(function(g){ return g.indexOf(a.Name) > -1; });
+    if (!already) {
+      var t = getTerritory(a.State);
+      if (t) groups[t].push(a.Name);
+    }
+  });
+
+  var territories = [
+    { key: 'west',  label: 'Tribal West',  color: '#c8900a' },
+    { key: 'south', label: 'Tribal South', color: '#c0392b' },
+    { key: 'north', label: 'Tribal North', color: '#2a5f9e' },
+  ];
+
+  var html = '';
+
+  territories.forEach(function(t) {
+    var athletes = groups[t.key] || [];
+    if (!athletes.length) return;
+    var cfg2 = TERRITORY_CONFIG[t.key];
+
+    var maxVal = 1;
+    athletes.forEach(function(name) {
+      maxVal = Math.max(maxVal, baselines[name]||0);
+      CHALLENGE_WEEKS.forEach(function(w) { maxVal = Math.max(maxVal, (weeklyMap[name]&&weeklyMap[name][w.key])||0); });
+    });
+
+    var barW = 14, barGap = 3, groupGap = 16, labelH = 28, chartH = 160;
+    var athleteW = barW * 5 + barGap * 4;
+    var totalW = athletes.length * (athleteW + groupGap) + 20;
+
+    var bars = athletes.map(function(name, ai) {
+      var x = ai * (athleteW + groupGap) + 10;
+      var baseline = baselines[name] || 0;
+      var barsHtml = '';
+
+      if (baseline > 0) {
+        var bh = Math.max(2, Math.round((baseline/maxVal)*(chartH-labelH)));
+        var by = chartH - labelH - bh;
+        barsHtml += '<rect x="'+x+'" y="'+by+'" width="'+barW+'" height="'+bh+'" fill="#e0dfd8" rx="1"><title>'+name+' — Baseline: '+baseline.toFixed(1)+' mi</title></rect>';
+        barsHtml += '<text x="'+(x+barW/2)+'" y="'+(by-3)+'" text-anchor="middle" font-size="7" fill="#b0afa8">'+baseline.toFixed(0)+'</text>';
+      }
+
+      CHALLENGE_WEEKS.forEach(function(w, wi) {
+        var miles = (weeklyMap[name]&&weeklyMap[name][w.key])||0;
+        var bx = x + (wi+1)*(barW+barGap);
+        if (miles > 0) {
+          var wh = Math.max(2, Math.round((miles/maxVal)*(chartH-labelH)));
+          var wy = chartH - labelH - wh;
+          barsHtml += '<rect x="'+bx+'" y="'+wy+'" width="'+barW+'" height="'+wh+'" fill="'+t.color+'" rx="1" opacity="'+(0.5+wi*0.17)+'"><title>'+name+' — '+w.label+': '+miles.toFixed(1)+' mi</title></rect>';
+          barsHtml += '<text x="'+(bx+barW/2)+'" y="'+(wy-3)+'" text-anchor="middle" font-size="7" fill="'+t.color+'">'+miles.toFixed(0)+'</text>';
+        } else {
+          barsHtml += '<rect x="'+bx+'" y="'+(chartH-labelH-4)+'" width="'+barW+'" height="4" fill="'+t.color+'" opacity="0.15" rx="1"><title>'+name+' — '+w.label+': no submission</title></rect>';
+        }
+      });
+
+      var fn = name.split(' ')[0];
+      var ln = name.split(' ')[1] ? name.split(' ')[1][0]+'.' : '';
+      barsHtml += '<text x="'+(x+athleteW/2)+'" y="'+(chartH-4)+'" text-anchor="middle" font-size="8" fill="var(--ink)">'+fn+'</text>';
+      barsHtml += '<text x="'+(x+athleteW/2)+'" y="'+(chartH+6)+'" text-anchor="middle" font-size="7" fill="#b0afa8">'+ln+'</text>';
+      return barsHtml;
+    }).join('');
+
+    var yLabels = '';
+    [0,0.25,0.5,0.75,1].forEach(function(pct) {
+      var val = Math.round(maxVal*pct);
+      var y = chartH - labelH - Math.round(pct*(chartH-labelH));
+      yLabels += '<line x1="0" y1="'+y+'" x2="'+totalW+'" y2="'+y+'" stroke="#f0efe8" stroke-width="1"/>';
+      yLabels += '<text x="4" y="'+(y-2)+'" font-size="7" fill="#b0afa8">'+val+'</text>';
+    });
+
+    var legend = '<text x="10" y="'+(chartH+20)+'" font-size="8" fill="#b0afa8">■ Baseline</text>';
+    CHALLENGE_WEEKS.forEach(function(w, wi) {
+      legend += '<text x="'+(68+wi*55)+'" y="'+(chartH+20)+'" font-size="8" fill="'+t.color+'" opacity="'+(0.5+wi*0.17)+'">■ '+w.label+'</text>';
+    });
+
+    html += '<div class="territory-section">'
+      + '<div style="margin-bottom:10px">'
+      + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">'
+      + '<span class="territory-title" style="color:'+t.color+'">'+cfg2.emoji+' '+t.label+'</span>'
+      + '<span class="territory-count">'+athletes.length+' athletes</span>'
+      + '</div>'
+      + '<div style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.4">'+cfg2.motto+'</div>'
+      + '</div>'
+      + '<div class="territory-chart">'
+      + '<svg width="100%" viewBox="0 0 '+totalW+' '+(chartH+28)+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace">'
+      + yLabels + bars + legend + '</svg>'
+      + '</div></div>';
+  });
+
+  el.innerHTML = html || '<div class="feed-empty">Baseline submissions will appear here</div>';
+}
 
 render().catch(function(e){
   document.getElementById('main-content').innerHTML = '<div class="loading">Error: ' + e.message + '</div>';
