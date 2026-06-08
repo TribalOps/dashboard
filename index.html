@@ -1470,15 +1470,13 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
   var el = document.getElementById('athletes-content');
   if (!el) return;
 
-  var roster   = window._athletesRoster || [];
   var baseline = window._baselineData   || [];
   var wkMiles  = window._weeklyMilesData|| [];
 
-  // Baseline lookup — skip rows where name looks like a header or is empty
+  // Baseline lookup
   var baselines = {};
   baseline.forEach(function(r) {
     var name = (r['Name']||'').trim();
-    // Skip if name is empty, is 'Name', or is longer than 40 chars (header text)
     if (!name || name === 'Name' || name.length > 40) return;
     Object.keys(r).forEach(function(k) {
       if (k.indexOf('average weekly run miles') > -1) {
@@ -1486,6 +1484,14 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
         if (!isNaN(val) && val > 0) baselines[name] = val;
       }
     });
+  });
+
+  // Territory map
+  var territoryMap = {};
+  baseline.forEach(function(r) {
+    var name = (r['Name']||'').trim();
+    var t = (r['What Territory are you in?']||'').trim().toLowerCase();
+    if (name && t && name.length <= 40) territoryMap[name] = t;
   });
 
   // Weekly miles lookup
@@ -1500,96 +1506,63 @@ function buildAthletesTab(weekRows, allWeekly, weeks, challenges, activities) {
     }
   });
 
-  // Territory map
-  var territoryMap = {};
-  baseline.forEach(function(r) {
-    var name = (r['Name']||'').trim();
-    var t = (r['What Territory are you in?']||'').trim().toLowerCase();
-    if (name && t) territoryMap[name] = t;
-  });
-  roster.forEach(function(a) {
-    if (a.Name && !territoryMap[a.Name]) {
-      var t = getTerritory(a.State);
-      if (t) territoryMap[a.Name] = t;
-    }
-  });
-
-  // All athletes from Baseline sheet only, sorted alphabetically
   var allNames = Object.keys(baselines).filter(Boolean).sort();
 
   if (!allNames.length) {
-    el.innerHTML = '<div class="feed-empty">No athletes yet</div>';
+    el.innerHTML = '<div class="feed-empty">No baseline submissions yet</div>';
     return;
   }
 
-  // Build one card per athlete
   var cards = allNames.map(function(name) {
     var territory = territoryMap[name] || 'north';
     var cfg = TERRITORY_CONFIG[territory] || TERRITORY_CONFIG['north'];
     var color = cfg.color;
-    var baseline = baselines[name] || 0;
+    var bv = baselines[name] || 0;
 
-    // Max value for this athlete
-    var maxVal = Math.max(1, baseline);
+    var maxVal = Math.max(1, bv);
     CHALLENGE_WEEKS.forEach(function(w) {
       maxVal = Math.max(maxVal, (weeklyMap[name]&&weeklyMap[name][w.key])||0);
     });
 
-    var barW = 40, barGap = 8, chartH = 100, labelH = 20;
+    var barW = 28, barGap = 5, chartH = 90, labelH = 18;
     var totalW = 5 * barW + 4 * barGap;
 
-    // Build 5 bars
     var barsHtml = '';
-    var barLabels = ['Baseline', 'Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'];
-    var barColors = ['#e0dfd8', color, color, color, color];
-    var barOpacity = [1, 0.6, 0.72, 0.84, 1.0];
-    var barValues = [baseline];
-    CHALLENGE_WEEKS.forEach(function(w) {
-      barValues.push((weeklyMap[name]&&weeklyMap[name][w.key])||0);
-    });
+    var barLabels = ['Base', 'Wk1', 'Wk2', 'Wk3', 'Wk4'];
+    var barValues = [bv];
+    CHALLENGE_WEEKS.forEach(function(w) { barValues.push((weeklyMap[name]&&weeklyMap[name][w.key])||0); });
 
     barValues.forEach(function(val, bi) {
       var x = bi * (barW + barGap);
       var bh = val > 0 ? Math.max(3, Math.round((val/maxVal)*(chartH-labelH))) : 3;
       var by = chartH - labelH - bh;
-      var opacity = bi === 0 ? 1 : barOpacity[bi];
       var fill = bi === 0 ? '#e0dfd8' : color;
-      var textColor = bi === 0 ? '#b0afa8' : color;
+      var opacity = bi === 0 ? 1 : (0.55 + bi * 0.12);
+      var textFill = bi === 0 ? '#aaa' : color;
 
-      barsHtml += '<rect x="'+x+'" y="'+by+'" width="'+barW+'" height="'+bh+'" fill="'+fill+'" rx="2" opacity="'+opacity+(val===0?'" style="stroke:'+fill+';stroke-dasharray:2"':'"')+'>'
-        + '<title>'+barLabels[bi]+': '+(val > 0 ? val.toFixed(1)+' mi' : 'no submission')+'</title></rect>';
-
-      if (val > 0) {
-        barsHtml += '<text x="'+(x+barW/2)+'" y="'+(by-4)+'" text-anchor="middle" font-size="9" fill="'+textColor+'">'+val.toFixed(1)+'</text>';
-      }
+      barsHtml += '<rect x="'+x+'" y="'+by+'" width="'+barW+'" height="'+bh+'" fill="'+fill+'" rx="2" opacity="'+opacity+'">'
+        + '<title>'+barLabels[bi]+': '+(val>0?val.toFixed(1)+' mi':'no submission')+'</title></rect>';
+      if (val > 0) barsHtml += '<text x="'+(x+barW/2)+'" y="'+(by-3)+'" text-anchor="middle" font-size="7" fill="'+textFill+'">'+val.toFixed(0)+'</text>';
       barsHtml += '<text x="'+(x+barW/2)+'" y="'+(chartH-2)+'" text-anchor="middle" font-size="8" fill="#b0afa8">'+barLabels[bi]+'</text>';
     });
 
-    // Y gridlines
-    var gridHtml = '';
-    [0, 0.5, 1].forEach(function(pct) {
+    var gridHtml = [0, 0.5, 1].map(function(pct) {
       var y = chartH - labelH - Math.round(pct*(chartH-labelH));
-      var val = Math.round(maxVal*pct);
-      gridHtml += '<line x1="-24" y1="'+y+'" x2="'+totalW+'" y2="'+y+'" stroke="#f0efe8" stroke-width="1"/>';
-      gridHtml += '<text x="-4" y="'+(y+3)+'" text-anchor="end" font-size="7" fill="#c8c8c0">'+val+'</text>';
-    });
+      return '<line x1="-20" y1="'+y+'" x2="'+totalW+'" y2="'+y+'" stroke="#f0efe8" stroke-width="1"/>'
+        + '<text x="-2" y="'+(y+3)+'" text-anchor="end" font-size="7" fill="#ccc">'+Math.round(maxVal*pct)+'</text>';
+    }).join('');
 
-    return '<div style="padding:14px 0;border-bottom:1px solid var(--rule-light)">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-      + '<span style="font-family:Playfair Display,serif;font-size:14px;font-weight:700;color:var(--black)">'+name+'</span>'
-      + '<span style="width:7px;height:7px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0"></span>'
-      + '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:'+color+';letter-spacing:1px;text-transform:uppercase">'+cfg.label+'</span>'
+    return '<div style="background:#fff;border:1px solid var(--rule);padding:12px;break-inside:avoid">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
+      + '<span style="font-family:Playfair Display,serif;font-size:13px;font-weight:700;color:var(--black)">'+name+'</span>'
+      + '<span style="width:6px;height:6px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0"></span>'
       + '</div>'
-      + '<svg width="100%" viewBox="-28 0 '+(totalW+32)+' '+chartH+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace" style="overflow:visible;display:block">'
-      + gridHtml + barsHtml
-      + '</svg>'
+      + '<svg width="100%" viewBox="-22 0 '+(totalW+24)+' '+chartH+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace" style="display:block;overflow:visible">'
+      + gridHtml + barsHtml + '</svg>'
       + '</div>';
   }).join('');
 
-  el.innerHTML = '<div class="panel">'
-    + '<div class="sec" style="margin:0 0 0">All Athletes — Alphabetical</div>'
-    + cards
-    + '</div>';
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">' + cards + '</div>';
 }
 
 
