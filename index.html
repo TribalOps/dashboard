@@ -1618,7 +1618,6 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
 
   territories.forEach(function(t) {
     var athletes = groups[t.key] || [];
-    if (!athletes.length) return;
     var cfg2 = TERRITORY_CONFIG[t.key];
 
     var maxVal = 1;
@@ -1629,7 +1628,22 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
 
     var barW = 14, barGap = 3, groupGap = 16, labelH = 28, chartH = 160;
     var athleteW = barW * 5 + barGap * 4;
-    var totalW = athletes.length * (athleteW + groupGap) + 20;
+    var totalW = Math.max(200, athletes.length * (athleteW + groupGap) + 20);
+
+    if (!athletes.length) {
+      html += '<div class="territory-section">'
+        + '<div style="margin-bottom:10px">'
+        + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">'
+        + '<span class="territory-title" style="color:'+t.color+'">'+cfg2.emoji+' '+t.label+'</span>'
+        + '<span class="territory-count">0 athletes</span>'
+        + '</div>'
+        + '<div style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.4">'+cfg2.motto+'</div>'
+        + '</div>'
+        + '<div class="territory-chart" style="display:flex;align-items:center;justify-content:center;height:60px">'
+        + '<span style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase">Awaiting baseline submissions</span>'
+        + '</div></div>';
+      return;
+    }
 
     var bars = athletes.map(function(name, ai) {
       var x = ai * (athleteW + groupGap) + 10;
