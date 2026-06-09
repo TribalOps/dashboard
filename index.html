@@ -1685,7 +1685,7 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
       + '<div style="font-family:DM Sans,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.4">'+cfg2.motto+'</div>'
       + '</div>'
       + '<div class="territory-chart">'
-      + '<svg width="100%" viewBox="0 0 '+totalW+' '+(chartH+28)+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace">'
+      + '<svg width="'+Math.min(totalW, 600)+'px" viewBox="0 0 '+totalW+' '+(chartH+28)+'" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono,monospace" style="max-width:100%">'
       + yLabels + bars + legend + '</svg>'
       + '</div></div>';
   });
