@@ -1601,18 +1601,11 @@ function buildTerritoryLeaderboard(athletesRoster, baselineData, weeklyMilesData
     if (name && territory) baselineTerritory[name] = territory;
   });
 
+  // Baseline form only — no roster fallback
   var groups = { west: [], south: [], north: [] };
   Object.keys(baselineTerritory).forEach(function(name) {
     var t = baselineTerritory[name];
     if (groups[t]) groups[t].push(name);
-  });
-  athletesRoster.forEach(function(a) {
-    if (!a.Name || a.Name === 'Name') return;
-    var already = Object.values(groups).some(function(g){ return g.indexOf(a.Name) > -1; });
-    if (!already) {
-      var t = getTerritory(a.State);
-      if (t) groups[t].push(a.Name);
-    }
   });
 
   var territories = [
